@@ -6,7 +6,9 @@
     "default": "light"
   },
   "colors": {
-    "primary": "#040404"
+    "primary": "#040404",
+    "light": "#EDEDED",
+    "dark": "#040404"
   },
   "logo": {
     "light": "/logo/belvedir-lockup.svg",
