@@ -1,0 +1,35 @@
+---
+title: "Hosted Inference"
+description: "Trace agents calling hosted OpenAI-compatible endpoints like Together, Fireworks, Groq, and OpenRouter."
+sidebarTitle: "Hosted Inference"
+---
+
+Open models too big for your hardware run the same way from a hosted OpenAI-compatible endpoint — the integration is identical to [local models](/inference/local-models), just with a different base URL and a real API key.
+
+## 1. Pick an endpoint
+
+Providers like [Together](https://www.together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com) and [OpenRouter](https://openrouter.ai) serve open models behind OpenAI-compatible APIs. If you'd rather run your own weights, self-host [vLLM](https://docs.vllm.ai) on a GPU cloud — it exposes the same API.
+
+## 2. Point your agent at the hosted endpoint
+
+Same OpenAI SDK, different base URL:
+
+```ts
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://api.together.xyz/v1",
+  apiKey: process.env.TOGETHER_API_KEY,
+});
+
+const res = await client.chat.completions.create({
+  model: "Qwen/Qwen3-235B-A22B",
+  messages: [{ role: "user", content: "hello" }],
+});
+```
+
+## 3. Trace it as usual
+
+Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap agent runs in `withSession`. Spans arrive with the hosted model name, so local, hosted and cloud-provider calls stay distinguishable in the dashboard.
+
+> Note: unlike local models, the hosted provider sees your prompts — the usual data-handling considerations for a cloud provider apply.

@@ -1,0 +1,80 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Fractal Machine Research",
+  "projectDescription": "An SDK and platform that automatically instruments LLM calls, collects OpenTelemetry traces, and opens GitHub PRs with AI-suggested code improvements.",
+  "theme": "luma",
+  "primaryColor": "#040404",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "how-it-works"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/installation",
+              "sdk/configuration",
+              "sdk/supported-providers"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/nextjs",
+              "guides/vercel",
+              "guides/environment-variables"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview",
+              "api-reference/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api-reference/traces"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Zero-config LLM call instrumentation via SDK",
+    "OpenTelemetry-based tracing (OTLP HTTP)",
+    "Support for 8+ LLM providers (OpenAI, Anthropic, Cohere, Azure OpenAI, Amazon Bedrock, Google Vertex AI, Replicate, HuggingFace)",
+    "Instance dashboard for trace visualization",
+    "AI-powered analysis using Claude to identify improvement patterns",
+    "Automated GitHub PR generation with code improvement suggestions"
+  ],
+  "publicApiSurface": [
+    "initialize({ apiKey, baseUrl, appName, disableBatch })",
+    "POST /api/v1/traces — OTLP JSON trace ingestion",
+    "@fractalresearch/loop npm package"
+  ]
+}

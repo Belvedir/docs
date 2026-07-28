@@ -1,0 +1,24 @@
+---
+title: "Fractal Loop SDK Configuration Options and Reference"
+sidebarTitle: "Configuration"
+description: "Learn how to configure the Fractal Loop SDK: set your API key, platform base URL, application name, and control span batching behavior."
+---
+
+Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, `disable_batch`); `instrumentModules` is Node-only.
+
+| Option | Description |
+| --- | --- |
+| `apiKey` | Required. Your Belvedir API key. |
+| `baseUrl` | Belvedir platform URL. Defaults to `https://platform.belvedir.ai` |
+| `appName` | Your application name. Used to label traces. |
+| `disableBatch` | Send spans immediately instead of batching. Useful for testing. |
+| `instrumentModules` | Your imported LLM SDKs, e.g. `{ openAI: openai.OpenAI, anthropic }`. Patches the modules directly instead of relying on require hooks — required in Next.js and other bundled or ESM environments. |
+
+## SDK API
+
+| Function | Description |
+| --- | --- |
+| `initialize(config)` | Patches your LLM clients and starts exporting spans. Call once in `instrumentation.ts`. |
+| `withSession(info, fn)` | Runs `fn` inside a session so every span it produces is linked under `info.sessionId` (plus optional `userId` / `metadata`). Required for Tasks & Groups. |
+| `task(name, fn)` | Optional boundary hint. Wraps a unit of work in a named span so segmentation knows where one task starts and ends. |
+| `flush()` | Forces pending spans to export. Await it before a serverless route returns. |

@@ -1,0 +1,73 @@
+---
+title: "Belvedir Quickstart"
+sidebarTitle: "Quickstart"
+description: "Install the Belvedir SDK, connect it to your AI application, and start seeing live LLM traces in your dashboard in under 5 minutes."
+---
+
+## 1. Create a project
+
+Sign in to the platform and create a new project, picking one or more improvement loops to run: **Prompt evolution** (GEPA over your system prompts), **Memory harness** (improves the scaffolding and memory around the model), and **LoRA finetuning** (trains adapters on your traces). The optimizer loops ask for the GitHub repo they should open PRs against; LoRA doesn't need one.
+
+You'll receive an API key starting with `fr_live_`. Save it somewhere secure — it won't be shown again. Projects are grouped into organizations; new accounts get one automatically, and you can create more from the dashboard.
+
+## 2. Install the SDK
+
+```bash
+npm install @fractalresearch/loop
+```
+
+## 3. Initialize in `instrumentation.ts`
+
+The SDK patches your LLM client (Anthropic / OpenAI) the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js the only place that's guaranteed is the `instrumentation.ts` hook at your project root:
+
+```ts
+// instrumentation.ts  (project root)
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { initialize } = await import("@fractalresearch/loop");
+    // Pass the LLM SDKs you use so they are patched no matter
+    // how Next.js loads them (see instrumentModules below).
+    const openai = await import("openai");
+    const anthropic = await import("@anthropic-ai/sdk");
+    initialize({
+      apiKey: process.env.FRACTAL_API_KEY,
+      appName: "my-ai-app",
+      instrumentModules: { openAI: openai.OpenAI, anthropic },
+    });
+  }
+}
+```
+
+Do **not** call `initialize()` from inside a route file — by then the LLM SDK is already imported and the patch won't take. In Next.js, always pass `instrumentModules` (only the SDKs you actually use): bundlers can load LLM SDKs in ways auto-instrumentation can't see, which silently drops all LLM spans.
+
+## 4. Group agent work into sessions
+
+This is what powers Tasks & Groups. Wrap each agent run in `withSession` so every LLM and tool call is linked under one session id. Belvedir then segments that session into the individual tasks the agent performed. Optionally wrap distinct units of work in `task()` for sharper task boundaries:
+
+```ts
+import loop from "@fractalresearch/loop";
+
+await loop.withSession(
+  { sessionId: chatId, userId: user.id },
+  async () => {
+    await loop.task("send_email", async () => {
+      await agent.run("email danny the report");
+    });
+    await loop.task("summarize_inbox", async () => {
+      await agent.run("summarize my unread mail");
+    });
+  }
+);
+```
+
+Without `withSession` you still get raw traces, but they can't be linked into sessions or segmented into tasks.
+
+## 5. View your tasks & groups
+
+Traces appear in the dashboard within seconds. About 30s after a session goes quiet, it's segmented — open the **Tasks** tab to see each task, and **Groups** to see tasks of the same type gathered together.
+
+## Next steps
+
+- [Python SDK](/sdk/python) if your agent is in Python.
+- [How It Works](/how-it-works) — what happens after your traces arrive.
+- [Common Issues](/troubleshooting/common-issues) if no traces show up.

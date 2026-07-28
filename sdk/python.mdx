@@ -1,0 +1,41 @@
+---
+title: "Python SDK"
+description: "Trace Python agents with the fractal-loop package."
+sidebarTitle: "Python"
+---
+
+Python agents use `fractal-loop` — the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages.
+
+## 1. Install the SDK
+
+```bash
+pip install fractal-loop
+```
+
+## 2. Initialize at process startup
+
+Call `initialize()` once, before your agent starts making LLM calls. Unlike Next.js there is no bundler in the way, so no `instrumentModules` equivalent is needed:
+
+```python
+import os
+import fractal_loop as loop
+
+loop.initialize(
+    api_key=os.environ["FRACTAL_API_KEY"],
+    app_name="my-agent",
+)
+```
+
+## 3. Group agent work into sessions
+
+Same as the Node SDK: `session` links every span under one session id (required for Tasks & Groups), and `task()` optionally marks task boundaries. Both are context managers and work inside `async def` bodies:
+
+```python
+with loop.session(session_id=chat_id, user_id=user.id):
+    with loop.task("send_email"):
+        agent.run("email danny the report")
+```
+
+## 4. Flush before short-lived processes exit
+
+Spans export in batches; scripts and serverless handlers can exit before the batch ships. Call `loop.flush()` before returning, or pass `disable_batch=True` to `initialize()` for local testing.

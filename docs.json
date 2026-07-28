@@ -1,0 +1,99 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "Belvedir",
+  "colors": {
+    "primary": "#040404"
+  },
+  "logo": {
+    "light": "https://media.brand.dev/74424d47-587b-4cc9-a8fa-edcb4b63aa0f.svg",
+    "dark": "https://media.brand.dev/74424d47-587b-4cc9-a8fa-edcb4b63aa0f.svg"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "quickstart",
+              "how-it-works"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/installation",
+              "sdk/configuration",
+              "sdk/supported-providers",
+              "sdk/python"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/nextjs",
+              "guides/vercel",
+              "guides/environment-variables"
+            ]
+          },
+          {
+            "group": "Inference",
+            "pages": [
+              "inference/local-models",
+              "inference/hosted",
+              "inference/mixture-of-models"
+            ]
+          },
+          {
+            "group": "Benchmarks",
+            "pages": [
+              "benchmarks/overview",
+              "benchmarks/environments"
+            ]
+          },
+          {
+            "group": "Training",
+            "pages": [
+              "training/overview"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/faq"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview",
+              "api-reference/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api-reference/traces"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://platform.belvedir.ai"
+    }
+  }
+}

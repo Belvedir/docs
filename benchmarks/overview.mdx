@@ -1,0 +1,64 @@
+---
+title: "Benchmarks"
+description: "Run agent harnesses in isolated CPU or GPU sandboxes and collect scores."
+sidebarTitle: "Overview"
+---
+
+Benchmarks run a **harness** — a git repo you register — inside an isolated sandbox. Belvedir clones the repo, runs your install and run commands, collects a score, and traces every LLM call the harness makes into your project.
+
+## Start from the catalog
+
+The New Harness page offers one-click presets for common suites — SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench (vLLM-served), and OpenClaw — each pointing at a Belvedir-maintained driver repo that already implements the contract below. Every prefilled field is editable before you create the harness. Some drivers (like OpenClaw) bring the agent scaffold but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$FRACTAL_TASKS_FILE`.
+
+## Runs are metered
+
+Each run is charged to your balance when it starts: $0.50 for CPU, $5.00 for GPU. If the sandbox fails to launch, the charge is refunded automatically. Check your balance, add funds, or redeem a coupon code under Settings → Balance.
+
+## Choose a compute type
+
+**CPU** (default) is for harnesses whose agent calls a hosted model API — Anthropic, OpenAI, or your own inference endpoint (set its URL as a harness env var). **GPU** is for harnesses that serve a model inside the sandbox — install vLLM or Ollama in your install command and start it from your run command; the sandbox gets an NVIDIA GPU (A10G by default). All sandboxes have git, Python 3, and Node preinstalled.
+
+## The harness contract
+
+Your run command executes at the repo root with these environment variables set (plus any you configure on the harness):
+
+```bash
+FRACTAL_API_KEY    # per-run ingest key (revoked when the run ends)
+FRACTAL_BASE_URL   # platform host to send traces to
+FRACTAL_RUN_ID     # this run's ID
+```
+
+## Send traces explicitly
+
+The SDK does **not** read these variables on its own — pass them to `initialize()`:
+
+```ts
+import { initialize, withSession, flush } from "@fractalresearch/loop";
+
+initialize({
+  apiKey: process.env.FRACTAL_API_KEY,
+  baseUrl: process.env.FRACTAL_BASE_URL,
+  appName: "my-benchmark",
+});
+
+await withSession({ sessionId: process.env.FRACTAL_RUN_ID }, async () => {
+  // ... run your agent ...
+});
+await flush(); // required — the sandbox exits right after your command
+```
+
+## Report a score
+
+Before exiting, write `results.json` at the repo root. A top-level numeric `score` is shown in the dashboard; everything else is stored verbatim. An optional `model` field labels which model the run evaluated — runs labeled with a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
+
+```json
+{ "score": 0.85, "passed": 17, "failed": 3, "model": "claude-sonnet-4-6" }
+```
+
+## Benchmark a fine-tuned model
+
+GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models (_Run benchmark_). The sandbox is then given extra environment variables — `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, which the harness echoes back as `results.model`), and `HF_TOKEN` for gated bases — so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
+
+## Limits
+
+Runs are capped at 1 hour of sandbox time. Results are capped at 256 KB and the stored log tail at 16 KB. A non-zero exit code from your run command marks the run failed. Tasks and groups appear ~30 seconds after the run's sessions go quiet, like any other traffic.

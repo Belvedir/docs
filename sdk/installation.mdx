@@ -1,0 +1,36 @@
+---
+title: "Install the Fractal Loop SDK for Your Node.js Project"
+sidebarTitle: "Installation"
+description: "Add @fractalresearch/loop to your Node.js project and start capturing LLM traces automatically — no manual instrumentation needed."
+---
+
+The Belvedir Node SDK auto-instruments the major LLM providers with a single `initialize()` call.
+
+## Install
+
+```bash
+npm install @fractalresearch/loop
+```
+
+## Initialize
+
+The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root — see the [Next.js guide](/guides/nextjs). In a plain Node process, call it at the top of your entry file:
+
+```ts
+import { initialize } from "@fractalresearch/loop";
+
+initialize({
+  apiKey: process.env.FRACTAL_API_KEY,
+  appName: "my-agent",
+});
+
+// import OpenAI/Anthropic *after* initialize()
+```
+
+For bundled or ESM environments, pass your LLM SDKs to `instrumentModules` so they're patched directly — see [Configuration](/sdk/configuration).
+
+## Next steps
+
+- [Configuration](/sdk/configuration) — every option accepted by `initialize()`.
+- [Providers](/sdk/supported-providers) — every LLM provider we auto-instrument.
+- [Python SDK](/sdk/python) — same concepts, snake\_case, context managers.

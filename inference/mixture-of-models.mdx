@@ -1,0 +1,29 @@
+---
+title: "Mixture of Models"
+description: "Route each step to whichever model fits and tune the routing from production data."
+sidebarTitle: "Mixture of Models"
+---
+
+Agents don't need one model for everything. Keep a small local model for cheap, high-volume steps and a bigger hosted model for hard reasoning, and route each call to whichever fits. Both clients are instances of the same OpenAI class, so a single `instrumentModules: { openAI: openai.OpenAI }` covers them all:
+
+```ts
+import OpenAI from "openai";
+
+const local = new OpenAI({
+  baseURL: "http://127.0.0.1:11434/v1",
+  apiKey: "ollama",
+});
+const hosted = new OpenAI({
+  baseURL: "https://api.together.xyz/v1",
+  apiKey: process.env.TOGETHER_API_KEY,
+});
+
+// route each step to the model that fits it
+const { client, model } = needsDeepReasoning(step)
+  ? { client: hosted, model: "Qwen/Qwen3-235B-A22B" }
+  : { client: local, model: "qwen3:4b" };
+
+const res = await client.chat.completions.create({ model, messages });
+```
+
+Every span records the model that served it, so the tasks and groups views show which model handles which kind of work. That makes the routing tunable from production data: find task types where the small model underperforms and promote those routes to the bigger model — or the reverse, and cut inference cost.

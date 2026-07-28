@@ -1,0 +1,33 @@
+---
+title: "Fractal SDK FAQ: Runtime, Traces, API Keys, and Multi-App"
+sidebarTitle: "FAQ"
+description: "Answers to common questions about the Fractal SDK: runtime support, LLM client setup, trace delivery timing, API key safety, and multi-app usage."
+---
+
+## Which runtimes are supported?
+
+The Node SDK requires the Node.js runtime — the Edge runtime on Vercel and similar platforms won't work because OpenTelemetry needs Node APIs. The Python SDK works anywhere CPython does. See [Vercel](/guides/vercel) for the runtime opt-in.
+
+## Do I need to set `baseUrl`?
+
+No. It defaults to `https://platform.belvedir.ai`. Only set it if you're targeting a self-hosted or staging platform host.
+
+## How long until traces appear in the dashboard?
+
+Traces appear within seconds. Tasks and groups form ~30 seconds after a session goes quiet — segmentation only runs once a session is idle.
+
+## Is my API key safe in `instrumentation.ts`?
+
+Yes — `instrumentation.ts` runs on the server. Never expose `FRACTAL_API_KEY` to client-side code.
+
+## Can I use one project for multiple apps?
+
+Yes. Set a different `appName` per app when calling `initialize()`; traces from each app are labeled and can be filtered in the dashboard.
+
+## What if my agent uses more than one LLM provider?
+
+Pass every provider you use to `instrumentModules`, e.g. `{ openAI: openai.OpenAI, anthropic }`. Every span records which provider and model served it, so you can compare them in the dashboard.
+
+## Can I route between local and hosted models?
+
+Yes — see [Mixture of Models](/inference/mixture-of-models).

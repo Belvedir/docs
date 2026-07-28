@@ -1,0 +1,13 @@
+---
+title: "Deploying Fractal-Instrumented Next.js Apps on Vercel"
+sidebarTitle: "Vercel"
+description: "Configure the Node.js runtime and set your environment variables on Vercel so Fractal SDK traces are captured correctly in production."
+---
+
+The Belvedir SDK relies on OpenTelemetry, which requires the Node.js runtime. On Vercel, routes can default to the Edge runtime where the SDK silently skips initialization. Add the following to any API route that makes LLM calls:
+
+```ts
+export const runtime = 'nodejs'
+```
+
+Set `FRACTAL_API_KEY` in your Vercel project's environment variables, then redeploy. See [Environment Variables](/guides/environment-variables) for the full list.

@@ -1,0 +1,39 @@
+---
+title: "Model Training"
+description: "Fine-tune an open model on your own production traffic with LoRA adapters."
+sidebarTitle: "Overview"
+---
+
+Fine-tune an open model on your own production traffic. Belvedir takes the successful tasks it segmented from your traces, distills them into a training set, and trains a LoRA adapter on a GPU sandbox. The finished adapter appears on the Models page and is yours to download.
+
+## What it trains on
+
+Successful tasks that captured both an input and an output — shown as the example count on the Training page. You can train on everything the agent does well, or pick a single group to distill one kind of work into a specialist. Training needs at least 200 examples; keep sending traces until you cross the floor. Datasets are capped at 1,000 examples — the newest eligible tasks win.
+
+## Training methods
+
+Three methods, all consuming the same success-only dataset:
+
+- **Supervised fine-tuning** (\$10.00) distills successful tasks directly — the model learns to reproduce the outputs your agent got right; the default and the cheapest.
+- **On-policy self-distillation** (\$20.00) has the model generate its own answers and nudges them toward what a teacher — the same base model shown the known-good output — would say, so it learns from its own mistakes instead of copying.
+- **Reinforcement learning** (\$30.00) scores sampled completions — with a Claude judge or by similarity to your successful outputs — and trains to raise that score (GRPO or PPO, picked automatically).
+
+## Base models
+
+Small open models that fit a single GPU: Qwen 2.5 7B / 1.5B Instruct, and Llama 3.1 8B Instruct. Llama is gated on HuggingFace, so it asks for an HF token — the token is passed to the training sandbox only and never stored.
+
+## Runs are metered
+
+Each training run is charged to your balance when it starts (the method prices above) and refunded automatically if the sandbox fails to launch. Runs are capped at 2 hours; typical runs finish well under that.
+
+## Auto-training
+
+Instead of launching runs by hand, enable auto-training on the Training page. It triggers a new run either when enough new traces have arrived since the last run (threshold of 50 or more) or on a fixed cadence (every 1–365 days), with a 24-hour cooldown between runs. Auto runs repeat the configuration of your last completed run and are billed the same as manual ones.
+
+## What you get back
+
+Training and eval loss on a held-out split, recorded on the run, plus the LoRA adapter itself (a zip of the standard PEFT files). Load it on the base model with `peft`, vLLM's `--lora-modules`, or any runtime that speaks LoRA. Always-on hosted serving from Belvedir is on the roadmap.
+
+## Run inference
+
+Every finished model has a _Run inference_ button on the Models page. It boots a GPU sandbox serving the base model with your adapter attached and opens a chat panel against it, so you can try the model before wiring it into anything. A session costs \$2.00, takes a few minutes to warm up (the sandbox downloads the base weights), and shuts down automatically after 30 minutes.

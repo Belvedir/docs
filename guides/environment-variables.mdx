@@ -1,0 +1,20 @@
+---
+title: "Fractal SDK Environment Variables: Setup and Best Practices"
+sidebarTitle: "Environment Variables"
+description: "Learn which environment variables the Fractal SDK requires and how to set them in local development, Vercel, and other hosting platforms."
+---
+
+The SDK itself only reads what you pass to `initialize()`. In practice most apps wire the following env vars to the SDK options:
+
+| Variable | Maps to | Notes |
+| --- | --- | --- |
+| `FRACTAL_API_KEY` | `apiKey` | Required. Starts with `fr_live_`. |
+| `FRACTAL_BASE_URL` | `baseUrl` | Optional. Defaults to `https://platform.belvedir.ai`. |
+
+## Benchmark harness variables
+
+If your code runs inside a Belvedir [benchmark](/benchmarks/overview) sandbox, three extra variables are injected at run time — `FRACTAL_API_KEY` (a per-run ingest key), `FRACTAL_BASE_URL`, and `FRACTAL_RUN_ID`. The SDK does **not** read them automatically; pass them to `initialize()` and use `FRACTAL_RUN_ID` as the `sessionId`.
+
+## Local development
+
+Set the vars in `.env.local` (Next.js) or export them in your shell. If traces aren't arriving, check your terminal for SDK warnings on startup and verify `FRACTAL_API_KEY` is loaded before `initialize()` runs.
