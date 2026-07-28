@@ -9,8 +9,8 @@
     "primary": "#040404"
   },
   "logo": {
-    "light": "/logo/belvedir-mark.svg",
-    "dark": "/logo/belvedir-mark-dark.svg"
+    "light": "/logo/belvedir-lockup.svg",
+    "dark": "/logo/belvedir-lockup-dark.svg"
   },
   "favicon": "/favicon.svg",
   "navigation": {
