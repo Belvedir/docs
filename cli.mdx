@@ -21,13 +21,23 @@ belvedir orgs                        # organizations, roles, balances
 belvedir projects                    # projects you can access
 belvedir keys my-agent               # your API keys in a project
 belvedir conversations my-agent -n 50
+belvedir traces my-agent             # raw spans (name, model, status)
 belvedir tasks my-agent
 belvedir groups my-agent
+belvedir cleaning my-agent           # the cleaning log
 belvedir models                      # fine-tuned models
 belvedir runs my-agent               # training runs + GEPA analyses
 belvedir benchmarks
+belvedir benchmarks show <run-id>    # status, score, log tail
+belvedir environments my-agent       # generated environments + simulations
+belvedir review my-agent             # GEPA proposals awaiting review
+belvedir setup my-agent              # target / loops / autonomy / signals
 belvedir routing my-agent
+belvedir members my-org              # roster + pending invites
+belvedir access my-agent             # per-member project access
 belvedir balance
+belvedir billing my-org              # the org's credit ledger
+belvedir github                      # connected GitHub accounts
 ```
 
 Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`.
@@ -36,14 +46,35 @@ Projects are referenced by UUID or by name when it's unambiguous. Every read tak
 
 ```bash
 belvedir projects create my-agent
+belvedir projects rename my-agent "my agent v2"
+belvedir projects delete my-agent --yes
 belvedir keys create my-agent router      # raw key printed once
 belvedir keys revoke <key-id>
+belvedir keys rename <key-id> production
+belvedir keys scan <key-id> off           # per-key signal detection
 belvedir train my-agent --method sft      # launch a LoRA training run
+belvedir train cancel <run-id>
 belvedir analyze my-agent                 # queue a GEPA run
+belvedir review approve <analysis-id>     # opens the PR (or reject)
+belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review
+belvedir autotrain my-agent --traces 500  # or --days 7, or --off
+belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py"
+belvedir benchmarks run <harness-id>      # charges the org, like the dashboard
+belvedir environments generate my-agent --group <group-id> --repo https://github.com/you/agent --run "python eval.py"
+belvedir environments simulate my-agent --group <group-id>
+belvedir models download <model-id>       # signed adapter URL
 belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --threshold 0.5
+belvedir routing pin my-agent <group-id> qwen3:4b
+belvedir orgs create "my team"
+belvedir members invite my-org teammate@example.com
+belvedir access set my-agent <user-id> off
+belvedir outcome my-agent <session-id> fail
+belvedir billing buy my-org --amount 20   # opens Stripe Checkout
+belvedir billing redeem my-org WELCOME
+belvedir github connect                   # opens the GitHub App install page
 ```
 
-Paid actions (training runs) charge the project's organization balance exactly like the dashboard, with the same refund rules.
+Paid actions (training and benchmark runs) charge the project's organization balance exactly like the dashboard, with the same refund rules; write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it — the flow finishes on the web.
 
 ## Notes
 
