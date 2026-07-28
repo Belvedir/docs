@@ -1,7 +1,7 @@
 ---
-title: "Mixture of Models"
-description: "Route each step to whichever model fits and tune the routing from production data."
-sidebarTitle: "Mixture of Models"
+title: "Model Routing"
+description: "Route each call to the model that fits it — your own routing code, or Belvedir's routing endpoint driven by your task groups."
+sidebarTitle: "Model Routing"
 ---
 
 Agents don't need one model for everything. Keep a small local model for cheap, high-volume steps and a bigger hosted model for hard reasoning, and route each call to whichever fits. Both clients are instances of the same OpenAI class, so a single `instrumentModules: { openAI: openai.OpenAI }` covers them all:
@@ -26,4 +26,29 @@ const { client, model } = needsDeepReasoning(step)
 const res = await client.chat.completions.create({ model, messages });
 ```
 
-Every span records the model that served it, so the tasks and groups views show which model handles which kind of work. That makes the routing tunable from production data: find task types where the small model underperforms and promote those routes to the bigger model — or the reverse, and cut inference cost.
+## Let Belvedir decide
+
+You can write `needsDeepReasoning` yourself, or let Belvedir decide. Configure routing under the **Routing** page (a default model, an optional strong model for hard requests, and per-task-group overrides), then ask `POST /api/v1/route` before each call, authenticated with the same API key as ingest. The decision is deterministic and fast: no model call, just your config plus a lexical match against your project's task groups and a complexity score on the request:
+
+```ts
+const res = await fetch("https://platform.belvedir.ai/api/v1/route", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.BELVEDIR_API_KEY,
+  },
+  body: JSON.stringify({ messages }), // or { task: "summarize this doc" }
+});
+const route = await res.json();
+// { configured: true, model: "qwen3:4b", tier: "default" | "strong" | "group",
+//   matched_group: { id, label } | null, complexity: 0.35, reason: "..." }
+
+const model = route.configured ? route.model : "qwen3:4b"; // local fallback
+const res2 = await client.chat.completions.create({ model, messages });
+```
+
+Unconfigured projects get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists.
+
+## Tune it from production data
+
+Every span still records the model that served it, so the tasks and groups views show which model handles which kind of work — find task groups where the small model underperforms and pin them to a bigger one, or the reverse, and cut inference cost.

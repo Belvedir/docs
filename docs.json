@@ -6,9 +6,10 @@
     "primary": "#040404"
   },
   "logo": {
-    "light": "https://media.brand.dev/74424d47-587b-4cc9-a8fa-edcb4b63aa0f.svg",
-    "dark": "https://media.brand.dev/74424d47-587b-4cc9-a8fa-edcb4b63aa0f.svg"
+    "light": "/logo/belvedir-mark.svg",
+    "dark": "/logo/belvedir-mark-dark.svg"
   },
+  "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
@@ -19,7 +20,8 @@
             "pages": [
               "index",
               "quickstart",
-              "how-it-works"
+              "how-it-works",
+              "importing-traces"
             ]
           },
           {
@@ -48,16 +50,17 @@
             ]
           },
           {
+            "group": "Training",
+            "pages": [
+              "training/optimization-loops",
+              "training/overview"
+            ]
+          },
+          {
             "group": "Benchmarks",
             "pages": [
               "benchmarks/overview",
               "benchmarks/environments"
-            ]
-          },
-          {
-            "group": "Training",
-            "pages": [
-              "training/overview"
             ]
           },
           {
@@ -82,7 +85,9 @@
           {
             "group": "Endpoints",
             "pages": [
-              "api-reference/traces"
+              "api-reference/traces",
+              "api-reference/outcomes",
+              "api-reference/route"
             ]
           }
         ]
@@ -90,6 +95,12 @@
     ]
   },
   "navbar": {
+    "links": [
+      {
+        "label": "belvedir.ai",
+        "href": "https://belvedir.ai"
+      }
+    ],
     "primary": {
       "type": "button",
       "label": "Dashboard",

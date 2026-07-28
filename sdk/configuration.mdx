@@ -1,7 +1,7 @@
 ---
-title: "Fractal Loop SDK Configuration Options and Reference"
+title: "Belvedir Loop SDK Configuration Options and Reference"
 sidebarTitle: "Configuration"
-description: "Learn how to configure the Fractal Loop SDK: set your API key, platform base URL, application name, and control span batching behavior."
+description: "Learn how to configure the Belvedir Loop SDK: set your API key, platform base URL, application name, and control span batching behavior."
 ---
 
 Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, `disable_batch`); `instrumentModules` is Node-only.
@@ -22,3 +22,4 @@ Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, 
 | `withSession(info, fn)` | Runs `fn` inside a session so every span it produces is linked under `info.sessionId` (plus optional `userId` / `metadata`). Required for Tasks & Groups. |
 | `task(name, fn)` | Optional boundary hint. Wraps a unit of work in a named span so segmentation knows where one task starts and ends. |
 | `flush()` | Forces pending spans to export. Await it before a serverless route returns. |
+| `reportOutcome(sessionId, outcome)` | Ground truth: tell Belvedir whether the session actually worked (`"success"` or `"fail"`) from a signal only your app has — the order shipped, the test passed. Reported outcomes beat the model-judged labels: a fail keeps that session's tasks out of training data. Call after `flush()`, or later from a webhook or job. Python: `report_outcome(session_id, outcome)`. |

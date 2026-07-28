@@ -1,12 +1,16 @@
 ---
-title: "Fix Fractal SDK Issues: Traces, Vercel, and Init Order"
+title: "Fix Belvedir SDK Issues: Traces, Vercel, and Init Order"
 sidebarTitle: "Common Issues"
-description: "Resolve the most common reasons LLM traces aren't appearing in your Fractal dashboard, from Vercel runtime mismatches to initialization ordering."
+description: "Resolve the most common reasons LLM traces aren't appearing in your Belvedir dashboard, from Vercel runtime mismatches to initialization ordering."
 ---
 
 ## No traces at all — check your baseUrl host
 
-Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `platform.belvedir.ai` (also served on `belvedir.ai` and the legacy `platform.fractalresearch.ai`). Pointing `baseUrl` at any other host returns a 404 and the spans are dropped silently — the SDK keeps running and your app shows no error, but nothing is ever stored. Safest is to omit `baseUrl` entirely, since it defaults to `https://platform.belvedir.ai`.
+Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `platform.belvedir.ai` (also served on `belvedir.ai`). Pointing `baseUrl` at any other host returns a 404 and the spans are dropped silently — the SDK keeps running and your app shows no error, but nothing is ever stored. Safest is to omit `baseUrl` entirely, since it defaults to `https://platform.belvedir.ai`.
+
+## Traces silently missing after July 2026
+
+SDK versions before `@fractalresearch/loop@0.1.5` / `fractal-loop 0.1.1` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `@belvedir/loop` / `belvedir-loop`, or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`.
 
 ## No traces appearing on Vercel
 
@@ -27,12 +31,12 @@ In Next.js there's a second cause: the bundler inlines the LLM SDK into the rout
 const openai = await import("openai");
 const anthropic = await import("@anthropic-ai/sdk");
 initialize({
-  apiKey: process.env.FRACTAL_API_KEY,
+  apiKey: process.env.BELVEDIR_API_KEY,
   instrumentModules: { openAI: openai.OpenAI, anthropic },
 });
 ```
 
-Requires `@fractalresearch/loop@0.1.3` or later. **Also keep the LLM SDKs external** so every bundle shares one runtime copy — if they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages` — the Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
+Requires `@belvedir/loop` (any version, or the deprecated `@fractalresearch/loop@0.1.3` or later). **Also keep the LLM SDKs external** so every bundle shares one runtime copy — if they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages` — the Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
 
 ## Traces show up but no tasks or groups
 
@@ -40,4 +44,4 @@ Tasks and groups only form for work wrapped in `withSession`. Make sure your age
 
 ## Traces missing in development
 
-Ensure your `FRACTAL_API_KEY` environment variable is set and that `initialize()` is called before any LLM client is created. Check your terminal for SDK warnings on startup.
+Ensure your `BELVEDIR_API_KEY` environment variable is set and that `initialize()` is called before any LLM client is created. Check your terminal for SDK warnings on startup.

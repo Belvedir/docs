@@ -1,15 +1,15 @@
 ---
 title: "Python SDK"
-description: "Trace Python agents with the fractal-loop package."
+description: "Trace Python agents with the belvedir-loop package."
 sidebarTitle: "Python"
 ---
 
-Python agents use `fractal-loop` — the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages.
+Python agents use `belvedir-loop` — the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages. (The legacy `fractal-loop` package still works but is deprecated.)
 
 ## 1. Install the SDK
 
 ```bash
-pip install fractal-loop
+pip install belvedir-loop
 ```
 
 ## 2. Initialize at process startup
@@ -18,10 +18,10 @@ Call `initialize()` once, before your agent starts making LLM calls. Unlike Next
 
 ```python
 import os
-import fractal_loop as loop
+import belvedir_loop as loop
 
 loop.initialize(
-    api_key=os.environ["FRACTAL_API_KEY"],
+    api_key=os.environ["BELVEDIR_API_KEY"],
     app_name="my-agent",
 )
 ```

@@ -1,11 +1,11 @@
 ---
-title: "Fractal REST API Reference: Traces and Authentication"
+title: "Belvedir REST API Reference: Traces, Outcomes, and Routing"
 sidebarTitle: "Overview"
-description: "Explore the Fractal REST API: ingest OpenTelemetry traces, authenticate requests, and integrate directly with the Fractal platform."
+description: "Explore the Belvedir REST API: ingest OpenTelemetry traces, report ground-truth outcomes, ask for routing decisions, and authenticate requests."
 ---
 
 The Belvedir REST API accepts OpenTelemetry trace data in OTLP JSON format. The SDK calls it automatically — you rarely need to hit it directly.
 
 - **Base URL** — `https://platform.belvedir.ai`
 - **Authentication** — API key via `Authorization: Bearer` or `x-api-key` header. See [Authentication](/api-reference/authentication).
-- **Endpoints** — [`POST /api/v1/traces`](/api-reference/traces).
+- **Endpoints** — [`POST /api/v1/traces`](/api-reference/traces), [`POST /api/v1/outcomes`](/api-reference/outcomes), [`POST /api/v1/route`](/api-reference/route).

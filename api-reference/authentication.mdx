@@ -1,23 +1,23 @@
 ---
-title: "Fractal API Authentication: API Keys and Bearer Tokens"
+title: "Belvedir API Authentication: API Keys and Bearer Tokens"
 sidebarTitle: "Authentication"
-description: "Learn how to authenticate requests to the Fractal API using your API key via the Authorization Bearer header or the x-api-key header."
+description: "Learn how to authenticate requests to the Belvedir API using your API key via the Authorization Bearer header or the x-api-key header."
 ---
 
-All API requests require your Belvedir API key. Keys start with `fr_live_` and are shown once at creation — store them securely.
+All API requests require your Belvedir API key. Keys start with `bv_live_` (legacy `fr_live_` keys remain valid) and are shown once at creation — store them securely.
 
 ## Bearer token
 
 ```bash
 curl https://platform.belvedir.ai/api/v1/traces \
-  -H "Authorization: Bearer fr_live_..."
+  -H "Authorization: Bearer bv_live_..."
 ```
 
 ## x-api-key header
 
 ```bash
 curl https://platform.belvedir.ai/api/v1/traces \
-  -H "x-api-key: fr_live_..."
+  -H "x-api-key: bv_live_..."
 ```
 
 Both headers are accepted. Choose whichever fits your HTTP client.

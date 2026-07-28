@@ -1,7 +1,7 @@
 ---
-title: "Fractal SDK FAQ: Runtime, Traces, API Keys, and Multi-App"
+title: "Belvedir SDK FAQ: Runtime, Traces, API Keys, and Multi-App"
 sidebarTitle: "FAQ"
-description: "Answers to common questions about the Fractal SDK: runtime support, LLM client setup, trace delivery timing, API key safety, and multi-app usage."
+description: "Answers to common questions about the Belvedir SDK: runtime support, LLM client setup, trace delivery timing, API key safety, and multi-app usage."
 ---
 
 ## Which runtimes are supported?
@@ -18,7 +18,7 @@ Traces appear within seconds. Tasks and groups form ~30 seconds after a session 
 
 ## Is my API key safe in `instrumentation.ts`?
 
-Yes — `instrumentation.ts` runs on the server. Never expose `FRACTAL_API_KEY` to client-side code.
+Yes — `instrumentation.ts` runs on the server. Never expose `BELVEDIR_API_KEY` to client-side code.
 
 ## Can I use one project for multiple apps?
 
@@ -30,4 +30,8 @@ Pass every provider you use to `instrumentModules`, e.g. `{ openAI: openai.OpenA
 
 ## Can I route between local and hosted models?
 
-Yes — see [Mixture of Models](/inference/mixture-of-models).
+Yes — see [Model Routing](/inference/mixture-of-models).
+
+## Can I tell Belvedir whether a session actually worked?
+
+Yes — report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fail")` (Python: `report_outcome`), or `POST /api/v1/outcomes` directly. A reported fail keeps that session's tasks out of training data. See the [SDK API](/sdk/configuration#sdk-api).

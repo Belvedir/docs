@@ -6,13 +6,23 @@ sidebarTitle: "Overview"
 
 Benchmarks run a **harness** — a git repo you register — inside an isolated sandbox. Belvedir clones the repo, runs your install and run commands, collects a score, and traces every LLM call the harness makes into your project.
 
+A benchmark decomposes into four swappable parts:
+
+```
+MODEL       ×  HARNESS     ×  TASKS       ×  GRADER
+the thing      the agent      what it        how it's
+under test     scaffold       attempts       scored
+```
+
+Complete suites like SWE-bench bring their own tasks and grading. Scaffold-style harnesses like OpenClaw are **custom benchmarks**: you supply the task list (the Tasks field on the harness) and an LLM judge grades the outcomes, so you can benchmark exactly the work your agent does in production.
+
 ## Start from the catalog
 
-The New Harness page offers one-click presets for common suites — SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench (vLLM-served), and OpenClaw — each pointing at a Belvedir-maintained driver repo that already implements the contract below. Every prefilled field is editable before you create the harness. Some drivers (like OpenClaw) bring the agent scaffold but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$FRACTAL_TASKS_FILE`.
+The New Harness page offers one-click presets for common suites — SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench (vLLM-served), and OpenClaw. Every prefilled field is editable before you create the harness. Some drivers (like OpenClaw) bring the agent scaffold but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
 
 ## Runs are metered
 
-Each run is charged to your balance when it starts: $0.50 for CPU, $5.00 for GPU. If the sandbox fails to launch, the charge is refunded automatically. Check your balance, add funds, or redeem a coupon code under Settings → Balance.
+Each run is charged to your organization's balance when it starts: \$0.50 for CPU, \$5.00 for GPU. If the sandbox fails to launch, the charge is refunded automatically. Check the balance and add funds under **Organization Settings → Billing**, or the organization owner can save a card there (Pay as You Go) and runs the balance can't cover charge it automatically, \$5 at a minimum with the surplus kept as balance.
 
 ## Choose a compute type
 
@@ -23,25 +33,29 @@ Each run is charged to your balance when it starts: $0.50 for CPU, $5.00 for GPU
 Your run command executes at the repo root with these environment variables set (plus any you configure on the harness):
 
 ```bash
-FRACTAL_API_KEY    # per-run ingest key (revoked when the run ends)
-FRACTAL_BASE_URL   # platform host to send traces to
-FRACTAL_RUN_ID     # this run's ID
+BELVEDIR_API_KEY     # per-run ingest key (revoked when the run ends)
+BELVEDIR_BASE_URL    # platform host to send traces to
+BELVEDIR_RUN_ID      # this run's ID
+BELVEDIR_TASKS_FILE  # path to your custom task list (only when the
+                     # harness has one)
 ```
+
+The legacy `FRACTAL_*` names are still set as aliases, so existing drivers keep working unchanged.
 
 ## Send traces explicitly
 
 The SDK does **not** read these variables on its own — pass them to `initialize()`:
 
 ```ts
-import { initialize, withSession, flush } from "@fractalresearch/loop";
+import { initialize, withSession, flush } from "@belvedir/loop";
 
 initialize({
-  apiKey: process.env.FRACTAL_API_KEY,
-  baseUrl: process.env.FRACTAL_BASE_URL,
+  apiKey: process.env.BELVEDIR_API_KEY,
+  baseUrl: process.env.BELVEDIR_BASE_URL,
   appName: "my-benchmark",
 });
 
-await withSession({ sessionId: process.env.FRACTAL_RUN_ID }, async () => {
+await withSession(process.env.BELVEDIR_RUN_ID, async () => {
   // ... run your agent ...
 });
 await flush(); // required — the sandbox exits right after your command
@@ -57,7 +71,7 @@ Before exiting, write `results.json` at the repo root. A top-level numeric `scor
 
 ## Benchmark a fine-tuned model
 
-GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models (_Run benchmark_). The sandbox is then given extra environment variables — `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, which the harness echoes back as `results.model`), and `HF_TOKEN` for gated bases — so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
+GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models. The sandbox is then given extra environment variables — `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, which the harness echoes back as `results.model`), and `HF_TOKEN` for gated bases — so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
 
 ## Limits
 

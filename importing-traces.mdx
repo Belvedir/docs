@@ -1,0 +1,50 @@
+---
+title: "Importing Traces"
+sidebarTitle: "Importing Traces"
+description: "Bring trace history over from LangSmith, Langfuse, Phoenix, Braintrust, PostHog, Mastra, or a CSV/JSONL/JSON file."
+---
+
+Already tracing with another observability platform? Import that history instead of waiting for fresh traffic. Imported traces go through the same pipeline as live ones, so they form sessions, tasks, and groups, and count toward training.
+
+## 1. From the dashboard
+
+**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly — paste the provider's API credentials, preview the recent conversations, and import the ones you pick (credentials are used for that import only, never stored; self-hosted deployments need a public https URL). Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically.
+
+## 2. Or from the shell
+
+Lists nothing, imports the 20 most recent conversations. Pass `--list` first to see what would be imported:
+
+```bash
+pip install belvedir-loop
+
+python -m belvedir_loop.importers.langsmith \
+    --langsmith-key lsv2_pt_... \
+    --project my-project \
+    --belvedir-key bv_live_... \
+    --limit 20
+```
+
+## 3. Or from Python
+
+List conversations, pick, and import. Conversations are LangSmith traces grouped by their `session_id` / `conversation_id` / `thread_id` metadata (traces without any are imported individually):
+
+```python
+from belvedir_loop.importers.langsmith import LangSmithImporter
+
+imp = LangSmithImporter(api_key="lsv2_pt_...", project="my-project")
+for conv in imp.list_conversations(limit=20):
+    print(conv.id, conv.name, conv.started_at)
+
+imp.import_conversations(
+    ["conv-id-1", "conv-id-2"],
+    belvedir_api_key="bv_live_...",
+)
+```
+
+## What to expect
+
+Imported traffic is attributed to the API key you pass, like live traffic — filter by it on the Data pages. LLM runs keep their full message history, tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
+
+<Warning>
+Re-importing the same conversation duplicates its spans, so import once.
+</Warning>
