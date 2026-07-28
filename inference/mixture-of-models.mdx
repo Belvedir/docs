@@ -37,18 +37,22 @@ const res = await fetch("https://platform.belvedir.ai/api/v1/route", {
     "Content-Type": "application/json",
     "x-api-key": process.env.BELVEDIR_API_KEY,
   },
-  body: JSON.stringify({ messages }), // or { task: "summarize this doc" }
+  // session_id is optional: pass your withSession/session id and the
+  // session's first decision sticks, so a conversation stays on one model.
+  body: JSON.stringify({ messages, session_id: sessionId }),
+  // or { task: "summarize this doc" }
 });
 const route = await res.json();
-// { configured: true, model: "qwen3:4b", tier: "default" | "strong" | "group",
+// { configured: true, model: "qwen3:4b",
+//   tier: "default" | "strong" | "group" | "pinned",
 //   matched_group: { id, label } | null, complexity: 0.35, reason: "..." }
 
 const model = route.configured ? route.model : "qwen3:4b"; // local fallback
 const res2 = await client.chat.completions.create({ model, messages });
 ```
 
-Unconfigured projects get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists.
+Unconfigured projects get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
 
 ## Tune it from production data
 
-Every span still records the model that served it, so the tasks and groups views show which model handles which kind of work. Find task groups where the small model underperforms and pin them to a bigger one, or the reverse, and cut inference cost.
+Every span still records the model that served it, so Belvedir builds a per-group record of how each model actually performs on that kind of work. The Routing page shows each group's observed success rates per model, that model's newest score in the group's generated environment when one exists, and a one-click **auto-pick** recommendation: the cheapest model whose observed success rate is within a few points of the best. Apply it and save — the loop's fine-tuned specialists earn traffic the same way, by winning on the record.
