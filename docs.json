@@ -2,6 +2,9 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "maple",
   "name": "Belvedir",
+  "appearance": {
+    "default": "light"
+  },
   "colors": {
     "primary": "#040404"
   },
