@@ -1,6 +1,6 @@
 ---
 title: "Model Routing"
-description: "Route each call to the model that fits it — your own routing code, or Belvedir's routing endpoint driven by your task groups."
+description: "Route each call to the model that fits it: your own routing code, or Belvedir's routing endpoint driven by your task groups."
 sidebarTitle: "Model Routing"
 ---
 
@@ -51,4 +51,4 @@ Unconfigured projects get `configured: false` (never an error), so the call is s
 
 ## Tune it from production data
 
-Every span still records the model that served it, so the tasks and groups views show which model handles which kind of work — find task groups where the small model underperforms and pin them to a bigger one, or the reverse, and cut inference cost.
+Every span still records the model that served it, so the tasks and groups views show which model handles which kind of work. Find task groups where the small model underperforms and pin them to a bigger one, or the reverse, and cut inference cost.

@@ -1,7 +1,7 @@
 ---
 title: "Install the Belvedir Loop SDK for Your Node.js Project"
 sidebarTitle: "Installation"
-description: "Add @belvedir/loop to your Node.js project and start capturing LLM traces automatically — no manual instrumentation needed."
+description: "Add @belvedir/loop to your Node.js project and start capturing LLM traces automatically, with no manual instrumentation needed."
 ---
 
 The Belvedir Node SDK auto-instruments the major LLM providers with a single `initialize()` call.
@@ -16,7 +16,7 @@ Migrating from Fractal? The old packages (`@fractalresearch/loop`, `fractal-loop
 
 ## Initialize
 
-The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root — see the [Next.js guide](/guides/nextjs). In a plain Node process, call it at the top of your entry file:
+The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root; see the [Next.js guide](/guides/nextjs). In a plain Node process, call it at the top of your entry file:
 
 ```ts
 import { initialize } from "@belvedir/loop";
@@ -29,10 +29,10 @@ initialize({
 // import OpenAI/Anthropic *after* initialize()
 ```
 
-For bundled or ESM environments, pass your LLM SDKs to `instrumentModules` so they're patched directly — see [Configuration](/sdk/configuration).
+For bundled or ESM environments, pass your LLM SDKs to `instrumentModules` so they're patched directly; see [Configuration](/sdk/configuration).
 
 ## Next steps
 
-- [Configuration](/sdk/configuration) — every option accepted by `initialize()`, and the full SDK API.
-- [Providers](/sdk/supported-providers) — every LLM provider we auto-instrument.
-- [Python SDK](/sdk/python) — same concepts, snake\_case, context managers.
+- [Configuration](/sdk/configuration): every option accepted by `initialize()`, and the full SDK API.
+- [Providers](/sdk/supported-providers): every LLM provider we auto-instrument.
+- [Python SDK](/sdk/python): same concepts, snake\_case, context managers.

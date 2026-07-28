@@ -22,10 +22,10 @@ export async function register() {
 }
 ```
 
-Do **not** call `initialize()` from inside a route file — by then the LLM SDK is already imported and the patch won't take. In Next.js, always pass `instrumentModules` (only the SDKs you actually use): bundlers can load LLM SDKs in ways auto-instrumentation can't see, which silently drops all LLM spans.
+Do **not** call `initialize()` from inside a route file. By then the LLM SDK is already imported and the patch won't take. In Next.js, always pass `instrumentModules` (only the SDKs you actually use): bundlers can load LLM SDKs in ways auto-instrumentation can't see, which silently drops all LLM spans.
 
 ## Keep LLM SDKs external
 
-Also keep the LLM SDKs external so every bundle shares one runtime copy — if they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages` — the Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
+Also keep the LLM SDKs external so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
 
 Requires `@belvedir/loop` (any version, or the deprecated `@fractalresearch/loop@0.1.3` or later).

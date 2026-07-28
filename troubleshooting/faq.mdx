@@ -6,7 +6,7 @@ description: "Answers to common questions about the Belvedir SDK: runtime suppor
 
 ## Which runtimes are supported?
 
-The Node SDK requires the Node.js runtime — the Edge runtime on Vercel and similar platforms won't work because OpenTelemetry needs Node APIs. The Python SDK works anywhere CPython does. See [Vercel](/guides/vercel) for the runtime opt-in.
+The Node SDK requires the Node.js runtime. The Edge runtime on Vercel and similar platforms won't work because OpenTelemetry needs Node APIs. The Python SDK works anywhere CPython does. See [Vercel](/guides/vercel) for the runtime opt-in.
 
 ## Do I need to set `baseUrl`?
 
@@ -14,11 +14,11 @@ No. It defaults to `https://platform.belvedir.ai`. Only set it if you're targeti
 
 ## How long until traces appear in the dashboard?
 
-Traces appear within seconds. Tasks and groups form ~30 seconds after a session goes quiet — segmentation only runs once a session is idle.
+Traces appear within seconds. Tasks and groups form ~30 seconds after a session goes quiet; segmentation only runs once a session is idle.
 
 ## Is my API key safe in `instrumentation.ts`?
 
-Yes — `instrumentation.ts` runs on the server. Never expose `BELVEDIR_API_KEY` to client-side code.
+Yes, `instrumentation.ts` runs on the server. Never expose `BELVEDIR_API_KEY` to client-side code.
 
 ## Can I use one project for multiple apps?
 
@@ -30,8 +30,8 @@ Pass every provider you use to `instrumentModules`, e.g. `{ openAI: openai.OpenA
 
 ## Can I route between local and hosted models?
 
-Yes — see [Model Routing](/inference/mixture-of-models).
+Yes, see [Model Routing](/inference/mixture-of-models).
 
 ## Can I tell Belvedir whether a session actually worked?
 
-Yes — report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fail")` (Python: `report_outcome`), or `POST /api/v1/outcomes` directly. A reported fail keeps that session's tasks out of training data. See the [SDK API](/sdk/configuration#sdk-api).
+Yes, report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fail")` (Python: `report_outcome`), or `POST /api/v1/outcomes` directly. A reported fail keeps that session's tasks out of training data. See the [SDK API](/sdk/configuration#sdk-api).

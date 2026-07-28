@@ -1,13 +1,13 @@
 ---
-title: "POST /api/v1/route — Ask Which Model Should Serve a Call"
+title: "POST /api/v1/route: Ask Which Model Should Serve a Call"
 sidebarTitle: "POST /route"
-description: "Ask Belvedir which model should serve a call, decided from your project's routing config and task groups. Deterministic and fast — no model call."
+description: "Ask Belvedir which model should serve a call, decided from your project's routing config and task groups. Deterministic and fast (no model call)."
 ---
 
-Asks which model should serve a call, decided from the project's Routing config (default model, optional strong model, per-task-group overrides) plus a lexical match against your task groups and a complexity score on the request. Deterministic and fast — no model call is made. Same API-key auth as ingest.
+Asks which model should serve a call, decided from the project's Routing config (default model, optional strong model, per-task-group overrides) plus a lexical match against your task groups and a complexity score on the request. Deterministic and fast; no model call is made. Same API-key auth as ingest.
 
-- **Authorization** — Bearer token with your API key, or use the `x-api-key` header.
-- **Body** — `{ "messages": [...] }` or `{ "task": "summarize this doc" }`
+- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
+- **Body**: `{ "messages": [...] }` or `{ "task": "summarize this doc" }`
 
 ## Response
 
@@ -22,6 +22,6 @@ Asks which model should serve a call, decided from the project's Routing config 
 }
 ```
 
-`tier` is `"group"` when a pinned task group matched, `"strong"` when the complexity score crossed the escalation threshold, else `"default"`. An unconfigured project gets `configured: false` — never an error — so the call is safe to ship before the dashboard config exists; keep a local fallback model.
+`tier` is `"group"` when a pinned task group matched, `"strong"` when the complexity score crossed the escalation threshold, else `"default"`. An unconfigured project gets `configured: false` (never an error), so the call is safe to ship before the dashboard config exists; keep a local fallback model.
 
 See [Model Routing](/inference/mixture-of-models) for the full integration pattern.

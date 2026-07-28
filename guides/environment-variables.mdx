@@ -13,7 +13,7 @@ The SDK itself only reads what you pass to `initialize()`. In practice most apps
 
 ## Benchmark harness variables
 
-If your code runs inside a Belvedir [benchmark](/benchmarks/overview) sandbox, extra variables are injected at run time — `BELVEDIR_API_KEY` (a per-run ingest key), `BELVEDIR_BASE_URL`, `BELVEDIR_RUN_ID`, and `BELVEDIR_TASKS_FILE` when the harness has a custom task set. The legacy `FRACTAL_*` names are also set as aliases for older drivers. The SDK does **not** read them automatically; pass them to `initialize()` and use `BELVEDIR_RUN_ID` as the `sessionId`.
+If your code runs inside a Belvedir [benchmark](/benchmarks/overview) sandbox, extra variables are injected at run time: `BELVEDIR_API_KEY` (a per-run ingest key), `BELVEDIR_BASE_URL`, `BELVEDIR_RUN_ID`, and `BELVEDIR_TASKS_FILE` when the harness has a custom task set. The legacy `FRACTAL_*` names are also set as aliases for older drivers. The SDK does **not** read them automatically; pass them to `initialize()` and use `BELVEDIR_RUN_ID` as the `sessionId`.
 
 ## Local development
 

@@ -4,15 +4,15 @@ description: "Trace agents running open models locally via Ollama."
 sidebarTitle: "Local Models"
 ---
 
-Belvedir traces agents running on local models the same way it traces cloud providers — same sessions, tasks, and groups. The only difference is where the tokens are generated.
+Belvedir traces agents running on local models the same way it traces cloud providers: same sessions, tasks, and groups. The only difference is where the tokens are generated.
 
 ## 1. Run a model locally
 
-Download the **Local Inference** desktop app — it bundles the Ollama engine and walks you through picking a model that fits your machine. If you already run [Ollama](https://ollama.com) yourself, that works too (e.g. `ollama pull qwen3:4b`). Either way a local server listens on `127.0.0.1:11434` — Ollama's default. If you've set `OLLAMA_HOST` or run Ollama in Docker with a remapped port, use that address in the `baseURL` below instead.
+Download the **Local Inference** desktop app; it bundles the Ollama engine and walks you through picking a model that fits your machine. If you already run [Ollama](https://ollama.com) yourself, that works too (e.g. `ollama pull qwen3:4b`). Either way a local server listens on `127.0.0.1:11434`, Ollama's default. If you've set `OLLAMA_HOST` or run Ollama in Docker with a remapped port, use that address in the `baseURL` below instead.
 
 ## 2. Point your agent at the local endpoint
 
-Ollama exposes an OpenAI-compatible API, so your agent talks to it through the OpenAI SDK — which the Belvedir SDK already instruments:
+Ollama exposes an OpenAI-compatible API, so your agent talks to it through the OpenAI SDK, which the Belvedir SDK already instruments:
 
 ```ts
 import OpenAI from "openai";
@@ -32,4 +32,4 @@ const res = await client.chat.completions.create({
 
 Nothing changes on the Belvedir side: initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap agent runs in `withSession` (see [Quickstart](/quickstart)). Spans arrive with the local model name (e.g. `qwen3:4b`) so you can tell local and cloud calls apart in the dashboard.
 
-> Note: inference stays on your machine, but traces do not — prompts and completions are exported to Belvedir like any instrumented app. Only enable tracing for local workloads you're comfortable sending.
+> Note: inference stays on your machine, but traces do not: prompts and completions are exported to Belvedir like any instrumented app. Only enable tracing for local workloads you're comfortable sending.

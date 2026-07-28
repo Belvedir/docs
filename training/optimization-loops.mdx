@@ -1,7 +1,7 @@
 ---
 title: "Optimization Loops"
 sidebarTitle: "Optimization Loops"
-description: "Harness evolution, prompt evolution, and LoRA finetuning — improvement loops that feed on your production traces and end back in production."
+description: "Harness evolution, prompt evolution, and LoRA finetuning: improvement loops that feed on your production traces and end back in production."
 ---
 
 Observability is the first half of Belvedir; the second half is closing the loop. Every project can run one or more **improvement loops** that feed on the same production traces: **Harness evolution** and **Prompt evolution** rewrite what your agent runs and reads, and **LoRA finetuning** distills your best traffic into a small model's weights. All of them end back in production, producing better traces.
@@ -37,7 +37,7 @@ Each loop evolves a different layer of your agent against its own production tra
 
 - **Prompt evolution**: a recursive self-improvement loop that uses [GEPA](https://arxiv.org/abs/2507.19457) (Genetic-Pareto) to evolve what your agent is told and remembers (system prompts, skills, instructions, memory files), never its application logic. Production sessions show what it misses and should have remembered; the loop distills that back into the scaffolding.
 - **Harness evolution**: the same GEPA loop with the whole harness on the table: prompts, tools, and code all evolve together. Natural-language reflection samples execution paths, diagnoses issues, and synthesizes improvements from the Pareto frontier of its own attempts, opening a PR with the winner.
-- **LoRA finetuning**: train lightweight LoRA adapters on your traces instead of touching the full weights — cheap to run, quick to iterate, and swappable per task type, on top of any open base model. See [Model Training](/training/overview).
+- **LoRA finetuning**: train lightweight LoRA adapters on your traces instead of touching the full weights: cheap to run, quick to iterate, and swappable per task type, on top of any open base model. See [Model Training](/training/overview).
 
 Loops are configured per project from the Training section (Training → Loops → Make a loop), and a project can run several at once.
 

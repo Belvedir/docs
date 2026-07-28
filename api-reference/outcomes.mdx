@@ -1,16 +1,16 @@
 ---
-title: "POST /api/v1/outcomes — Report Ground-Truth Session Outcomes"
+title: "POST /api/v1/outcomes: Report Ground-Truth Session Outcomes"
 sidebarTitle: "POST /outcomes"
 description: "Tell Belvedir whether a session actually worked, from a signal only your app has. Reported outcomes beat model-judged labels."
 ---
 
-Reports whether a session actually worked, from a signal only your app has — the order shipped, the test passed. Same API-key auth as ingest. The SDK wraps this as `reportOutcome(sessionId, outcome)` (Python: `report_outcome`).
+Reports whether a session actually worked, from a signal only your app has: the order shipped, the test passed. Same API-key auth as ingest. The SDK wraps this as `reportOutcome(sessionId, outcome)` (Python: `report_outcome`).
 
-- **Authorization** — Bearer token with your API key, or use the `x-api-key` header.
-- **Body** — `{ "session_id": "...", "outcome": "success" | "fail" }`
+- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
+- **Body**: `{ "session_id": "...", "outcome": "success" | "fail" }`
 
-Reported ground truth beats the segmenter's judgment, asymmetrically: a `fail` overrides the session's tasks to fail — so bad sessions drop out of training data and environments everywhere task outcomes are read — while a `success` is stored on the session only (it never promotes tasks the segmenter judged failed).
+Reported ground truth beats the segmenter's judgment, asymmetrically: a `fail` overrides the session's tasks to fail, so bad sessions drop out of training data and environments everywhere task outcomes are read, while a `success` is stored on the session only (it never promotes tasks the segmenter judged failed).
 
 <Warning>
-A report for a session the platform hasn't seen yet returns 404 — call `flush()` first so the session's spans have arrived.
+A report for a session the platform hasn't seen yet returns 404; call `flush()` first so the session's spans have arrived.
 </Warning>

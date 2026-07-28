@@ -4,7 +4,7 @@ description: "Run agent harnesses in isolated CPU or GPU sandboxes and collect s
 sidebarTitle: "Overview"
 ---
 
-Benchmarks run a **harness** — a git repo you register — inside an isolated sandbox. Belvedir clones the repo, runs your install and run commands, collects a score, and traces every LLM call the harness makes into your project.
+Benchmarks run a **harness** (a git repo you register) inside an isolated sandbox. Belvedir clones the repo, runs your install and run commands, collects a score, and traces every LLM call the harness makes into your project.
 
 A benchmark decomposes into four swappable parts:
 
@@ -18,7 +18,7 @@ Complete suites like SWE-bench bring their own tasks and grading. Scaffold-style
 
 ## Start from the catalog
 
-The New Harness page offers one-click presets for common suites — SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench (vLLM-served), and OpenClaw. Every prefilled field is editable before you create the harness. Some drivers (like OpenClaw) bring the agent scaffold but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
+The New Harness page offers one-click presets for common suites: SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench (vLLM-served), and OpenClaw. Every prefilled field is editable before you create the harness. Some drivers (like OpenClaw) bring the agent scaffold but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
 
 ## Runs are metered
 
@@ -26,7 +26,7 @@ Each run is charged to your organization's balance when it starts: \$0.50 for CP
 
 ## Choose a compute type
 
-**CPU** (default) is for harnesses whose agent calls a hosted model API — Anthropic, OpenAI, or your own inference endpoint (set its URL as a harness env var). **GPU** is for harnesses that serve a model inside the sandbox — install vLLM or Ollama in your install command and start it from your run command; the sandbox gets an NVIDIA GPU (A10G by default). All sandboxes have git, Python 3, and Node preinstalled.
+**CPU** (default) is for harnesses whose agent calls a hosted model API: Anthropic, OpenAI, or your own inference endpoint (set its URL as a harness env var). **GPU** is for harnesses that serve a model inside the sandbox: install vLLM or Ollama in your install command and start it from your run command; the sandbox gets an NVIDIA GPU (A10G by default). All sandboxes have git, Python 3, and Node preinstalled.
 
 ## The harness contract
 
@@ -44,7 +44,7 @@ The legacy `FRACTAL_*` names are still set as aliases, so existing drivers keep 
 
 ## Send traces explicitly
 
-The SDK does **not** read these variables on its own — pass them to `initialize()`:
+The SDK does **not** read these variables on its own; pass them to `initialize()`:
 
 ```ts
 import { initialize, withSession, flush } from "@belvedir/loop";
@@ -58,12 +58,12 @@ initialize({
 await withSession(process.env.BELVEDIR_RUN_ID, async () => {
   // ... run your agent ...
 });
-await flush(); // required — the sandbox exits right after your command
+await flush(); // required: the sandbox exits right after your command
 ```
 
 ## Report a score
 
-Before exiting, write `results.json` at the repo root. A top-level numeric `score` is shown in the dashboard; everything else is stored verbatim. An optional `model` field labels which model the run evaluated — runs labeled with a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
+Before exiting, write `results.json` at the repo root. A top-level numeric `score` is shown in the dashboard; everything else is stored verbatim. An optional `model` field labels which model the run evaluated; runs labeled with a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
 
 ```json
 { "score": 0.85, "passed": 17, "failed": 3, "model": "claude-sonnet-4-6" }
@@ -71,7 +71,7 @@ Before exiting, write `results.json` at the repo root. A top-level numeric `scor
 
 ## Benchmark a fine-tuned model
 
-GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models. The sandbox is then given extra environment variables — `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, which the harness echoes back as `results.model`), and `HF_TOKEN` for gated bases — so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
+GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models. The sandbox is then given extra environment variables: `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, which the harness echoes back as `results.model`), and `HF_TOKEN` for gated bases, so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
 
 ## Limits
 

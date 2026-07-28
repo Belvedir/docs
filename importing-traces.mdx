@@ -8,7 +8,7 @@ Already tracing with another observability platform? Import that history instead
 
 ## 1. From the dashboard
 
-**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly — paste the provider's API credentials, preview the recent conversations, and import the ones you pick (credentials are used for that import only, never stored; self-hosted deployments need a public https URL). Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically.
+**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick (credentials are used for that import only, never stored; self-hosted deployments need a public https URL). Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically.
 
 ## 2. Or from the shell
 
@@ -43,7 +43,7 @@ imp.import_conversations(
 
 ## What to expect
 
-Imported traffic is attributed to the API key you pass, like live traffic — filter by it on the Data pages. LLM runs keep their full message history, tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
+Imported traffic is attributed to the API key you pass, like live traffic; filter by it on the Data pages. LLM runs keep their full message history, tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
 
 <Warning>
 Re-importing the same conversation duplicates its spans, so import once.
