@@ -26,7 +26,8 @@
               "index",
               "quickstart",
               "how-it-works",
-              "importing-traces"
+              "importing-traces",
+              "cli"
             ]
           },
           {

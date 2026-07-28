@@ -1,0 +1,52 @@
+---
+title: "Belvedir CLI"
+sidebarTitle: "CLI"
+description: "The Belvedir platform from your shell: projects, keys, traces, training, benchmarks, and routing."
+---
+
+Everything the dashboard shows you, from the terminal. The CLI signs in as your real Belvedir account, so it sees exactly the organizations, projects, and keys the dashboard would.
+
+```bash
+npm install -g @belvedir/cli
+belvedir login          # opens your browser (Google sign-in)
+belvedir projects
+```
+
+`belvedir login` opens the Belvedir dashboard, where you're usually already signed in — click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json`, refreshes automatically, and `belvedir logout` forgets it.
+
+## Reading your data
+
+```bash
+belvedir orgs                        # organizations, roles, balances
+belvedir projects                    # projects you can access
+belvedir keys my-agent               # your API keys in a project
+belvedir conversations my-agent -n 50
+belvedir tasks my-agent
+belvedir groups my-agent
+belvedir models                      # fine-tuned models
+belvedir runs my-agent               # training runs + GEPA analyses
+belvedir benchmarks
+belvedir routing my-agent
+belvedir balance
+```
+
+Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`.
+
+## Acting
+
+```bash
+belvedir projects create my-agent
+belvedir keys create my-agent router      # raw key printed once
+belvedir keys revoke <key-id>
+belvedir train my-agent --method sft      # launch a LoRA training run
+belvedir analyze my-agent                 # queue a GEPA run
+belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --threshold 0.5
+```
+
+Paid actions (training runs) charge the project's organization balance exactly like the dashboard, with the same refund rules.
+
+## Notes
+
+- Requires Node 18 or newer. The package has no dependencies.
+- Sending traces is not the CLI's job — that's the [`@belvedir/loop`](/sdk/installation) SDK.
+- Self-hosted or staging platform: `belvedir login --platform https://your-host`.
