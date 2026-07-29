@@ -52,13 +52,11 @@ Public benchmark drivers don't hardcode a model. The model under test is ordinar
 
 ```bash
 MODEL           # model id to evaluate
-MODEL_API_BASE  # OpenAI-compatible base URL; leave blank to infer the
-                # provider from the model id (claude-* → Anthropic,
-                # gpt-* → OpenAI)
+MODEL_API_BASE  # OpenAI-compatible base URL (default: OpenRouter)
 MODEL_API_KEY   # key for that endpoint, billed to your account
 ```
 
-Any OpenAI-compatible endpoint works: hosted providers, a Together-deployed fine-tune, or your own vLLM. LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies. GPU drivers (lm-eval, MT-Bench) instead serve `MODEL` in-sandbox with vLLM and need no model endpoint.
+The default base is OpenRouter (`https://openrouter.ai/api/v1`): one key covers essentially every hosted model, addressed as `vendor/model` ids like `anthropic/claude-sonnet-4.6`. Any other OpenAI-compatible endpoint works too — a Together-deployed fine-tune, your own vLLM — and leaving the base blank infers the provider from the model id. LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies. GPU drivers (lm-eval, MT-Bench) instead serve `MODEL` in-sandbox with vLLM and need no model endpoint.
 
 ## Run with attempts and grading
 
