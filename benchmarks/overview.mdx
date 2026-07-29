@@ -38,7 +38,7 @@ BELVEDIR_BASE_URL      # platform host to send traces to
 BELVEDIR_RUN_ID        # this run's ID
 BELVEDIR_TASKS_FILE    # path to your custom task list (only when the
                        # harness has one)
-BELVEDIR_TASK_ATTEMPTS # runs per task picked in the launcher (default 1)
+BELVEDIR_TASK_ATTEMPTS # runs per task picked at launch (default 1)
 BELVEDIR_GRADING       # "pass@1" (average success over attempts),
                        # "pass@k" (a task passes if any attempt does),
                        # or "mean" (average score)
@@ -46,9 +46,23 @@ BELVEDIR_GRADING       # "pass@1" (average success over attempts),
 
 The legacy `FRACTAL_*` names are still set as aliases, so existing drivers keep working unchanged.
 
-## Run an environment with attempts and grading
+## Which model runs
 
-The **My Benchmarks** page launches benchmarks from your [environments](/benchmarks/environments): pick one, pick how many times each task runs (×1, ×3, ×5, ×10), and pick the grading rule — `pass@1`, `pass@k`, or mean score. The choice is stamped on the run and handed to the sandbox as `BELVEDIR_TASK_ATTEMPTS` / `BELVEDIR_GRADING`; grading itself is the harness's job — run each task that many times and fold the attempts into the top-level `score` accordingly.
+Public benchmark drivers don't hardcode a model. The model under test is ordinary harness env, set when you run:
+
+```bash
+MODEL           # model id to evaluate
+MODEL_API_BASE  # OpenAI-compatible base URL; leave blank to infer the
+                # provider from the model id (claude-* → Anthropic,
+                # gpt-* → OpenAI)
+MODEL_API_KEY   # key for that endpoint, billed to your account
+```
+
+Any OpenAI-compatible endpoint works: hosted providers, a Together-deployed fine-tune, or your own vLLM. LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies. GPU drivers (lm-eval, MT-Bench) instead serve `MODEL` in-sandbox with vLLM and need no model endpoint.
+
+## Run with attempts and grading
+
+The **New Benchmark** wizard (My Benchmarks → New benchmark) picks one of your benchmarks, how many times each task runs, and the grading rule — `pass@1`, `pass@k`, or mean score. The choice is stamped on the run and handed to the sandbox as `BELVEDIR_TASK_ATTEMPTS` / `BELVEDIR_GRADING`; grading itself is the harness's job — run each task that many times and fold the attempts into the top-level `score` accordingly.
 
 ## Send traces explicitly
 
