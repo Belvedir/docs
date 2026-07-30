@@ -48,7 +48,6 @@ Projects are referenced by UUID or by name when it's unambiguous. Every read tak
 belvedir projects create my-agent
 belvedir projects rename my-agent "my agent v2"
 belvedir projects delete my-agent --yes
-belvedir keys create my-agent router      # raw key printed once
 belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
 belvedir keys scan <key-id> off           # per-key signal detection
@@ -56,13 +55,27 @@ belvedir train my-agent --method sft      # launch a LoRA training run
 belvedir train cancel <run-id>
 belvedir analyze my-agent                 # queue a GEPA run
 belvedir review approve <analysis-id>     # opens the PR (or reject)
-belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review
+belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --keys all
 belvedir autotrain my-agent --traces 500  # or --days 7, or --off
 belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py"
-belvedir benchmarks run <harness-id>      # charges the org, like the dashboard
+belvedir benchmarks add my-agent swe-bench-lite --env MODEL=anthropic/claude-sonnet-4.6
+belvedir benchmarks catalog               # the public presets and their env
+belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
+belvedir benchmarks run <harness-id> --model <trained-model-id>   # GPU eval of a fine-tune
+belvedir benchmarks cancel <run-id>
+belvedir benchmarks delete <harness-id> --yes
 belvedir environments generate my-agent --group <group-id> --repo https://github.com/you/agent --run "python eval.py"
 belvedir environments simulate my-agent --group <group-id>
+belvedir environments declare my-agent --name "Refund requests" --description "Customer asks for a refund..."
+belvedir signals my-agent                 # error/slow/frustration scan
+belvedir validation my-agent              # success rates + shipped deltas
+belvedir routing stats my-agent           # per-group model records + recommendation
+belvedir simulations run <simulation-id> --episodes 8
+belvedir harness map my-agent you/agent   # map a connected repo's harness
+belvedir repos add my-agent you/agent     # project repository access
 belvedir models download <model-id>       # signed adapter URL
+belvedir deploy <model-id>                # Together deploy, start to endpoint
+belvedir billing payg my-org              # save a pay-as-you-go card
 belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --threshold 0.5
 belvedir routing pin my-agent <group-id> qwen3:4b
 belvedir orgs create "my team"
@@ -75,6 +88,10 @@ belvedir github connect                   # opens the GitHub App install page
 ```
 
 Paid actions (training and benchmark runs) charge the project's organization balance exactly like the dashboard, with the same refund rules; write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it — the flow finishes on the web.
+
+## Using with coding agents
+
+If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching paid runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly. Prefer a member account with project exclusions over the org owner's account for agent machines, and never approve a `cli-auth` link you didn't initiate — the approve page shows a verification code that must match the one your terminal printed.
 
 ## Notes
 
