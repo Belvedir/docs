@@ -8,7 +8,7 @@ Belvedir traces agents running on local models the same way it traces cloud prov
 
 ## 1. Run a model locally
 
-Download the **Local Inference** desktop app; it bundles the Ollama engine and walks you through picking a model that fits your machine. If you already run [Ollama](https://ollama.com) yourself, that works too (e.g. `ollama pull qwen3:4b`). Either way a local server listens on `127.0.0.1:11434`, Ollama's default. If you've set `OLLAMA_HOST` or run Ollama in Docker with a remapped port, use that address in the `baseURL` below instead.
+Download the **Local Inference** desktop app; it bundles the Ollama engine, can also drive [llama.cpp](https://github.com/ggml-org/llama.cpp) or [vLLM](https://docs.vllm.ai) for models you point it at, and walks you through picking a model that fits your machine's memory. If you already run [Ollama](https://ollama.com) yourself, that works too (e.g. `ollama pull qwen3:4b`). Either way a local server listens on `127.0.0.1:11434`, Ollama's default. If you've set `OLLAMA_HOST` or run Ollama in Docker with a remapped port, use that address in the `baseURL` below instead.
 
 ## 2. Point your agent at the local endpoint
 
