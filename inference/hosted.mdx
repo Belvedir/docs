@@ -36,4 +36,4 @@ Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap 
 
 ## Deploying a fine-tuned model
 
-Models trained on Belvedir are standard PEFT LoRA adapters. Click **Deploy** on the model's row (Models page): with a Together API key the adapter is uploaded and served automatically (the key is used for the deploy and never stored; the endpoint lands in your Together account), or follow the prefilled steps for Fireworks and self-hosted vLLM — then point your agent at that endpoint exactly as above. Belvedir is never in the request path.
+Models trained on Belvedir are standard PEFT LoRA adapters. Click **Deploy** on the model's row (Models page) and paste a Together API key: the adapter is uploaded and served automatically from a scale-to-zero endpoint (the key is used for the deploy and never stored; the endpoint lands in your Together account). Then point your agent at that endpoint exactly as above. Prefer somewhere else? The panel also has prefilled steps for Fireworks and self-hosted vLLM, and the adapter downloads as a plain PEFT zip that loads anywhere. Belvedir is never in the request path.
