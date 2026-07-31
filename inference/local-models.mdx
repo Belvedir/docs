@@ -8,11 +8,13 @@ Belvedir traces agents running on local models the same way it traces cloud prov
 
 ## 1. Run a model locally
 
-Download the **Belvedir Local** desktop app; it bundles the Ollama engine, can also drive [llama.cpp](https://github.com/ggml-org/llama.cpp) or [vLLM](https://docs.vllm.ai) for models you point it at, and walks you through picking a model that fits your machine's memory.
+Download the **Belvedir Local** desktop app; it bundles the [llama.cpp](https://github.com/ggml-org/llama.cpp) engine (with [Ollama](https://ollama.com) and [vLLM](https://docs.vllm.ai) as switchable alternatives) and walks you through picking a model that fits your machine's memory; the weights download on first launch.
 
 <Note>
 macOS blocks the app on first open (it isn't notarized yet). Click Done, not Move to Trash, then run `xattr -cr "/Applications/Belvedir Local.app"` and reopen it. Approving it under System Settings → Privacy & Security → Open Anyway also works.
-</Note> If you already run [Ollama](https://ollama.com) yourself, that works too (e.g. `ollama pull qwen3:4b`). Either way a local server listens on `127.0.0.1:11434`, Ollama's default. If you've set `OLLAMA_HOST` or run Ollama in Docker with a remapped port, use that address in the `baseURL` below instead.
+</Note>
+
+The app serves on `127.0.0.1:8080`, llama.cpp's standard port, adopting a llama-server you already run there. On the Ollama engine the endpoint is `127.0.0.1:11434` instead; use whichever address matches your engine in the `baseURL` below.
 
 ## 2. Point your agent at the local endpoint
 
@@ -22,8 +24,8 @@ Ollama exposes an OpenAI-compatible API, so your agent talks to it through the O
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  baseURL: "http://127.0.0.1:11434/v1",
-  apiKey: "ollama", // required by the SDK, ignored by Ollama
+  baseURL: "http://127.0.0.1:8080/v1",
+  apiKey: "local", // required by the SDK, ignored locally
 });
 
 const res = await client.chat.completions.create({
