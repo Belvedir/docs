@@ -28,7 +28,7 @@ const res = await client.chat.completions.create({ model, messages });
 
 ## Let Belvedir decide
 
-You can write `needsDeepReasoning` yourself, or let Belvedir decide. Configure routing under the **Routing** page (a default model, an optional strong model for hard requests, and per-task-group overrides), then ask `POST /api/v1/route` before each call, authenticated with the same API key as ingest. The decision is deterministic and fast: no model call, just your config plus a lexical match against your project's task groups and a complexity score on the request:
+You can write `needsDeepReasoning` yourself, or let Belvedir decide. Configure routing under the **Routing** page (a default model, an optional strong model for hard requests, and per-task-group overrides), then ask `POST /api/v1/route` before each call, authenticated with the same API key as ingest. A project can hold several routers, but exactly one is the **production** router: that is the config this endpoint serves. The others are drafts; stage a new setup there and click "Make production" to switch, instantly and reversibly. The decision is deterministic and fast: no model call, just your config plus a lexical match against your project's task groups and a complexity score on the request:
 
 ```ts
 const res = await fetch("https://platform.belvedir.ai/api/v1/route", {
