@@ -52,6 +52,7 @@ belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
 belvedir keys scan <key-id> off           # per-key signal detection
 belvedir train my-agent --method sft      # launch a LoRA training run
+belvedir train my-agent --method rl --reward similarity --algorithm auto
 belvedir train cancel <run-id>
 belvedir analyze my-agent                 # queue a GEPA run
 belvedir review approve <analysis-id>     # opens the PR (or reject)
