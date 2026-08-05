@@ -83,7 +83,7 @@ await flush(); // required: the sandbox exits right after your command
 
 ## Report a score
 
-Before exiting, write `results.json` at the repo root. A top-level numeric `score` is shown in the dashboard; everything else is stored verbatim. An optional `model` field labels which model the run evaluated; runs labeled with a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
+Before exiting, write `results.json` at the repo root. A top-level numeric `score` on a **0–1 scale** is shown in the dashboard (scores are compared across models in the routing editor, so a percent scale would read as 100× better); everything else is stored verbatim. A run that exits 0 without a numeric score is marked failed. An optional `model` field labels which model the run evaluated; runs labeled with a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
 
 ```json
 { "score": 0.85, "passed": 17, "failed": 3, "model": "claude-sonnet-4-6" }
