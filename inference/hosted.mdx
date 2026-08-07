@@ -34,6 +34,12 @@ Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap 
 
 > Note: unlike local models, the hosted provider sees your prompts; the usual data-handling considerations for a cloud provider apply.
 
+## Testing a fine-tuned model without a provider
+
+Models fine-tuned on Belvedir need no provider account while you test: every playground session on the Models page is itself an OpenAI-compatible server. Start a session ("Run inference" on the model's row), open **Use as an API endpoint** next to the chat, and copy the snippet: a base URL, a session key, and the model name `adapter`. Point any OpenAI SDK or curl at it from your own code. The endpoint lives for the session's 30 minutes and the key stops working when the session ends.
+
+Two things to keep in the request (the snippet includes both): the model name must be `adapter` (the base model name would skip your LoRA), and `chat_template_kwargs: {"enable_thinking": false}` (thinking bases like Qwen3 otherwise spend the token budget on reasoning).
+
 ## Deploying a fine-tuned model
 
 Models trained on Belvedir are standard PEFT LoRA adapters. Click **Deploy** on the model's row (Models page) and paste a Together API key: the adapter is uploaded and served automatically from a scale-to-zero endpoint (the key is used for the deploy and never stored; the endpoint lands in your Together account). Then point your agent at that endpoint exactly as above. Prefer somewhere else? The panel also has prefilled steps for Fireworks and self-hosted vLLM, and the adapter downloads as a plain PEFT zip that loads anywhere. Belvedir is never in the request path.
