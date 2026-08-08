@@ -26,12 +26,12 @@ belvedir tasks my-agent
 belvedir groups my-agent
 belvedir cleaning my-agent           # the cleaning log
 belvedir models                      # fine-tuned models
-belvedir runs my-agent               # training runs + GEPA analyses
+belvedir runs my-agent               # training + optimization runs
 belvedir benchmarks
 belvedir benchmarks show <run-id>    # status, score, log tail
 belvedir environments my-agent       # generated environments + simulations
-belvedir review my-agent             # GEPA proposals awaiting review
-belvedir setup my-agent              # target / loops / autonomy / signals
+belvedir review my-agent             # proposals awaiting review
+belvedir setup my-agent              # target / loops / design / autonomy
 belvedir routing my-agent
 belvedir members my-org              # roster + pending invites
 belvedir access my-agent             # per-member project access
@@ -50,13 +50,12 @@ belvedir projects rename my-agent "my agent v2"
 belvedir projects delete my-agent --yes
 belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
-belvedir keys scan <key-id> off           # per-key signal detection
 belvedir train my-agent --method sft      # launch a LoRA training run
 belvedir train my-agent --method rl --reward similarity --algorithm auto
 belvedir train cancel <run-id>
-belvedir analyze my-agent                 # queue a GEPA run
+belvedir analyze my-agent                 # queue an optimization run
 belvedir review approve <analysis-id>     # opens the PR (or reject)
-belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --keys all
+belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --design loop2 --keys all
 belvedir autotrain my-agent --traces 500  # or --days 7, or --off
 belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py"
 belvedir benchmarks add my-agent swe-bench-lite --env MODEL=anthropic/claude-sonnet-4.6
