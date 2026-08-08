@@ -49,7 +49,7 @@ Each project also picks a **design**: the algorithm that proposes changes. **Loo
 
 ### Loop 2 (default): diagnose and repair
 
-Loop 2 works the way an engineer would: triage the failing traces into failure modes, diagnose each one's root cause against the relevant repository files, and write one targeted patch per failure mode. It can create new files (skills, memory) outright, and its findings show the root cause behind every change.
+Loop 2 works the way an engineer would: triage the failing traces into failure modes, diagnose each one's root cause against the relevant repository files (reading a structured step graph of each trace, not just the transcript), and write one targeted patch per failure mode with checkable fix criteria. It can create new files (skills, memory) outright, remembers what earlier runs shipped or had rejected, and every proposed change cites the traces that motivated it.
 
 ```
   failing production traces
@@ -64,10 +64,13 @@ Loop 2 works the way an engineer would: triage the failing traces into failure m
     edits (and brand-new files) for that mode
        │
        ▼
-  SCORE each patch on real traces: keep only
-  patches that improve the failing traces
-  without regressing the OK ones, then merge
-  the compatible winners
+  SCORE each patch on real traces: where the
+  patch touches what the model was told, the
+  recorded model call is RE-RUN with the patch
+  applied and both outputs are compared blind,
+  in both orders. Keep only patches that improve
+  the failing traces without regressing the OK
+  ones, then merge the compatible winners
        │
        ▼
   held-out validation → per-file diffs for your review → PR
