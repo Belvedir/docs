@@ -1,15 +1,15 @@
 ---
 title: "Python SDK"
-description: "Trace Python agents with the belvedir-loop package."
+description: "Trace Python agents with the belvedir package."
 sidebarTitle: "Python"
 ---
 
-Python agents use `belvedir-loop`: the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages. (The legacy `fractal-loop` package still works but is deprecated.)
+Python agents use `belvedir`: the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages. (The legacy `fractal-loop` package still works but is deprecated.)
 
 ## 1. Install the SDK
 
 ```bash
-pip install belvedir-loop
+pip install belvedir
 ```
 
 ## 2. Initialize at process startup
@@ -18,7 +18,7 @@ Call `initialize()` once, before your agent starts making LLM calls. Unlike Next
 
 ```python
 import os
-import belvedir_loop as loop
+import belvedir as loop
 
 loop.initialize(
     api_key=os.environ["BELVEDIR_API_KEY"],

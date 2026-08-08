@@ -15,9 +15,9 @@ Already tracing with another observability platform? Import that history instead
 Lists nothing, imports the 20 most recent conversations. Pass `--list` first to see what would be imported:
 
 ```bash
-pip install belvedir-loop
+pip install belvedir
 
-python -m belvedir_loop.importers.langsmith \
+python -m belvedir.importers.langsmith \
     --langsmith-key lsv2_pt_... \
     --project my-project \
     --belvedir-key bv_live_... \
@@ -29,7 +29,7 @@ python -m belvedir_loop.importers.langsmith \
 List conversations, pick, and import. Conversations are LangSmith traces grouped by their `session_id` / `conversation_id` / `thread_id` metadata (traces without any are imported individually):
 
 ```python
-from belvedir_loop.importers.langsmith import LangSmithImporter
+from belvedir.importers.langsmith import LangSmithImporter
 
 imp = LangSmithImporter(api_key="lsv2_pt_...", project="my-project")
 for conv in imp.list_conversations(limit=20):

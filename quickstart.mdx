@@ -13,7 +13,7 @@ You'll receive an API key starting with `bv_live_`. Save it somewhere secure; it
 ## 2. Install the SDK
 
 ```bash
-npm install @belvedir/loop
+npm install belvedir
 ```
 
 Migrating from Fractal? The old packages (`@fractalresearch/loop`, `fractal-loop`) still work but are deprecated.
@@ -26,7 +26,7 @@ The SDK patches your LLM client (Anthropic / OpenAI) the moment `initialize()` r
 // instrumentation.ts  (project root)
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { initialize } = await import("@belvedir/loop");
+    const { initialize } = await import("belvedir");
     // Pass the LLM SDKs you use so they are patched no matter
     // how Next.js loads them (see instrumentModules below).
     const openai = await import("openai");
@@ -47,7 +47,7 @@ Do **not** call `initialize()` from inside a route file. By then the LLM SDK is 
 This is what powers Tasks & Groups. Wrap each agent run in `withSession` so every LLM and tool call is linked under one session id. Belvedir then segments that session into the individual tasks the agent performed. Optionally wrap distinct units of work in `task()` for sharper task boundaries:
 
 ```ts
-import loop from "@belvedir/loop";
+import loop from "belvedir";
 
 await loop.withSession(
   { sessionId: chatId, userId: user.id },

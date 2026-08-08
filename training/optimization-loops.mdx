@@ -20,8 +20,8 @@ Observability is the first half of Belvedir; the second half is closing the loop
              ▼                             ▼            │
   Harness evolution /           LoRA finetuning         │
   Prompt evolution              (distill your best      │
-  (GEPA rewrites prompts,       tasks into a small      │
-  skills, memory, code)         model's weights)        │
+  (rewrites prompts, skills,    tasks into a small      │
+  memory, code)                 model's weights)        │
              │                             │            │
              ▼                             ▼            │
   GitHub PR, gated on           fine-tuned model,       │
@@ -35,15 +35,47 @@ Observability is the first half of Belvedir; the second half is closing the loop
 
 Each loop evolves a different layer of your agent against its own production traces:
 
-- **Prompt evolution**: a recursive self-improvement loop that uses [GEPA](https://arxiv.org/abs/2507.19457) (Genetic-Pareto) to evolve what your agent is told and remembers (system prompts, skills, instructions, memory files), never its application logic. Production sessions show what it misses and should have remembered; the loop distills that back into the scaffolding.
-- **Harness evolution**: the same GEPA loop with the whole harness on the table: prompts, tools, and code all evolve together. Natural-language reflection samples execution paths, diagnoses issues, and synthesizes improvements from the Pareto frontier of its own attempts, opening a PR with the winner.
+- **Prompt evolution**: a recursive self-improvement loop over what your agent is told and remembers (system prompts, skills, instructions, memory files), never its application logic. Production sessions show what it misses and should have remembered; the loop distills that back into the scaffolding.
+- **Harness evolution**: the same loop with the whole harness on the table: prompts, tools, and code all improve together, opening a PR with the winner.
 - **LoRA finetuning**: train lightweight LoRA adapters on your traces instead of touching the full weights: cheap to run, quick to iterate, and swappable per task type, on top of any open base model. See [Model Training](/training/overview).
 
 Loops are configured per project from the Training section (Training → Loops → Make a loop), and a project can run several at once.
 
-## Harness evolution & prompt evolution (GEPA)
+## Harness evolution & prompt evolution: two designs
 
-Both loops run **GEPA**, an evolutionary optimizer. The starting point (the "seed") is your repo exactly as it is today; each dataset example is one real trace: the transcript of what your agent actually did, plus its outcome. The only difference between the two loops is what GEPA is allowed to touch: Harness evolution can edit the whole repo, while Prompt evolution is constrained to scaffolding (prompts, skills, memory files, instructions), so it improves what the agent is _told and remembers_, never its application logic.
+Both loops start from your repo exactly as it is today (the "seed"); each dataset example is one real trace: the transcript of what your agent actually did, plus its outcome. The difference between the two loops is what may be touched: Harness evolution can edit the whole repo, while Prompt evolution is constrained to scaffolding (prompts, skills, memory files, instructions), so it improves what the agent is _told and remembers_, never its application logic.
+
+Each project also picks a **design**: the algorithm that proposes changes. **Loop 2** is the default; **Loop 1 (GEPA)** is the original design. Pick it in the setup wizard's approach step, or with `belvedir setup <project> --design loop1|loop2`.
+
+### Loop 2 (default): diagnose and repair
+
+Loop 2 works the way an engineer would: triage the failing traces into failure modes, diagnose each one's root cause against the relevant repository files, and write one targeted patch per failure mode. It can create new files (skills, memory) outright, and its findings show the root cause behind every change.
+
+```
+  failing production traces
+       │
+       ▼
+  TRIAGE into at most 3 failure modes
+       │
+       ▼
+  for each failure mode:
+    DIAGNOSE the root cause against the
+    relevant repo files, then PATCH: whole-file
+    edits (and brand-new files) for that mode
+       │
+       ▼
+  SCORE each patch on real traces: keep only
+  patches that improve the failing traces
+  without regressing the OK ones, then merge
+  the compatible winners
+       │
+       ▼
+  held-out validation → per-file diffs for your review → PR
+```
+
+### Loop 1: GEPA
+
+Loop 1 runs [GEPA](https://arxiv.org/abs/2507.19457) (Genetic-Pareto), an evolutionary optimizer: natural-language reflection rewrites one file at a time and a diverse pool of variants competes across traces.
 
 ```
   seed = your repo's current files
@@ -70,7 +102,7 @@ Both loops run **GEPA**, an evolutionary optimizer. The starting point (the "see
   best variant → per-file diffs for your review → PR
 ```
 
-The scoring trick is what makes this work without re-running your agent: unchanged code is graded by _what actually happened_, and each proposed edit is graded by a judge reasoning about whether it would have prevented the failures visible in the transcript. Failing traces are deliberately over-sampled so there is always something to win.
+The scoring trick is shared by both designs and is what makes this work without re-running your agent: unchanged code is graded by _what actually happened_, and each proposed edit is graded by a judge reasoning about whether it would have prevented the failures visible in the transcript. Failing traces are deliberately over-sampled so there is always something to win.
 
 By default nothing ships without you: proposals wait as per-file diffs on Training History, and approving opens the GitHub PR. Each loop has its own autonomy, set in the Training section's setup wizard. Switch a loop to Auto-PR to skip the gate.
 
@@ -82,4 +114,4 @@ To read your repo and open PRs, the optimizer needs GitHub access. Connect the *
 
 ## One skeleton
 
-Every loop shares one skeleton: _propose a variant, score it against reality, keep the winner_. GEPA's variants are text scored against past traces; the model loop's variants are weights scored by harness runs. Auto-training can keep the model loop turning on its own, retraining after every N new traces or on a schedule.
+Every loop shares one skeleton: _propose a variant, score it against reality, keep the winner_. The optimization loops' variants are text scored against past traces; the model loop's variants are weights scored by harness runs. Auto-training can keep the model loop turning on its own, retraining after every N new traces or on a schedule.

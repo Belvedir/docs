@@ -28,4 +28,24 @@ Asks which model should serve a call, decided from the project's Routing config 
 
 Pass your SDK session id as `session_id` and the session's first decision sticks: repeat calls return the same model as `tier: "pinned"` for up to 24 hours, keeping a conversation consistent and prompt caches warm. Changing the routing config releases stale pins (a pinned model no longer in the config is re-decided). Fresh decisions are logged, which is what powers the Routing page's observed per-group success rates and recommendations.
 
+## POST /api/v1/route/chat/completions: let the router make the call
+
+The routing decision, executed. This sibling endpoint is OpenAI-compatible: point any OpenAI client at `baseURL: https://platform.belvedir.ai/api/v1/route` with your `bv_live_` key and `chat.completions.create` lands here. Belvedir picks the model (same decision and pinning rules as above), runs the call on its own provider account, and returns the provider's response unchanged; streaming works.
+
+```ts
+const router = new OpenAI({
+  baseURL: "https://platform.belvedir.ai/api/v1/route",
+  apiKey: process.env.BELVEDIR_API_KEY,
+});
+const res = await router.chat.completions.create(
+  { model: "auto", messages },
+  { headers: { "x-session-id": sessionId } }
+);
+```
+
+- `model` in the request is **ignored** once routing is configured; the router is the point. Projects without a routing config can pass an explicit `model` and use the endpoint as a plain metered proxy.
+- Pass your session id in the `x-session-id` header or a `session_id` body field (stripped before forwarding) to pin the conversation to one model.
+- Which model served the call comes back in `model` on the response body and the `x-belvedir-model` / `x-belvedir-tier` / `x-belvedir-group` response headers.
+- **Billing**: routed calls bill your organization's credits at cost; exact token counts and the provider's own per-call price, attributed to the calling API key. An organization out of credits with pay as you go off gets `402` before any model is called.
+
 See [Model Routing](/inference/mixture-of-models) for the full integration pattern.

@@ -1,7 +1,7 @@
 ---
-title: "Install the Belvedir Loop SDK for Your Node.js Project"
+title: "Install the Belvedir SDK for Your Node.js Project"
 sidebarTitle: "Installation"
-description: "Add @belvedir/loop to your Node.js project and start capturing LLM traces automatically, with no manual instrumentation needed."
+description: "Add belvedir to your Node.js project and start capturing LLM traces automatically, with no manual instrumentation needed."
 ---
 
 The Belvedir Node SDK auto-instruments the major LLM providers with a single `initialize()` call.
@@ -9,7 +9,7 @@ The Belvedir Node SDK auto-instruments the major LLM providers with a single `in
 ## Install
 
 ```bash
-npm install @belvedir/loop
+npm install belvedir
 ```
 
 Migrating from Fractal? The old packages (`@fractalresearch/loop`, `fractal-loop`) still work but are deprecated.
@@ -19,7 +19,7 @@ Migrating from Fractal? The old packages (`@fractalresearch/loop`, `fractal-loop
 The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root; see the [Next.js guide](/guides/nextjs). In a plain Node process, call it at the top of your entry file:
 
 ```ts
-import { initialize } from "@belvedir/loop";
+import { initialize } from "belvedir";
 
 initialize({
   apiKey: process.env.BELVEDIR_API_KEY,

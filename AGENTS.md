@@ -9,7 +9,7 @@ The platform repo (`Belvedir/belvedir-platform`) is the source of truth for prod
 ## Terminology (July 2026 Belvedir rename — get this right)
 
 - The product is **Belvedir**; the company is Fractal Machine Research, Inc. Never brand pages "Fractal".
-- Packages: npm `@belvedir/loop`, PyPI `belvedir-loop` (module `belvedir_loop`). The legacy `@fractalresearch/loop` / `fractal-loop` packages still work but are deprecated — mention them only as migration notes.
+- Packages: npm `belvedir`, PyPI `belvedir` (import `belvedir`). The `@belvedir/loop` and `belvedir-loop` names are supported aliases of the same code — docs should say `belvedir`. The legacy `@fractalresearch/loop` / `fractal-loop` packages still work but are deprecated — mention them only as migration notes.
 - API keys start with `bv_live_`; legacy `fr_live_` keys remain valid.
 - Env vars are `BELVEDIR_*` (`BELVEDIR_API_KEY`, `BELVEDIR_BASE_URL`, `BELVEDIR_RUN_ID`, `BELVEDIR_TASKS_FILE`); legacy `FRACTAL_*` names are set as aliases in benchmark sandboxes only.
 - The ingest default is `https://platform.belvedir.ai`; `platform.fractalresearch.ai` is RETIRED (spans sent there are dropped) — see the Common Issues entry.
