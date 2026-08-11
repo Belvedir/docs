@@ -51,7 +51,7 @@ const model = route.configured ? route.model : "qwen3:4b"; // local fallback
 const res2 = await client.chat.completions.create({ model, messages });
 ```
 
-Unconfigured projects get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
+Every new project starts with a Default router (GLM 5.2 serves, clearly hard requests escalate to Claude Fable 5). Unconfigured projects (older ones, or those whose routers were deleted) get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
 
 ## Tune it from production data
 

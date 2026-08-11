@@ -22,7 +22,7 @@ Asks which model should serve a call, decided from the project's Routing config 
 }
 ```
 
-`tier` is `"group"` when a pinned task group matched, `"strong"` when the complexity score crossed the escalation threshold, `"pinned"` when an earlier decision for the same `session_id` was replayed, else `"default"`. An unconfigured project gets `configured: false` (never an error), so the call is safe to ship before the dashboard config exists; keep a local fallback model.
+`tier` is `"group"` when a pinned task group matched, `"strong"` when the complexity score crossed the escalation threshold, `"pinned"` when an earlier decision for the same `session_id` was replayed, else `"default"`. Every new project starts with a Default router (GLM 5.2 serves, clearly hard requests escalate to Claude Fable 5), so a fresh project routes from day one. An unconfigured project (an older one, or one whose routers were deleted) gets `configured: false` (never an error), so the call is safe to ship before any dashboard config exists; keep a local fallback model.
 
 ## Session pinning
 
