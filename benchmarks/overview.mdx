@@ -75,7 +75,7 @@ initialize({
   appName: "my-benchmark",
 });
 
-await withSession(process.env.BELVEDIR_RUN_ID, async () => {
+await withSession({ sessionId: process.env.BELVEDIR_RUN_ID }, async () => {
   // ... run your agent ...
 });
 await flush(); // required: the sandbox exits right after your command
