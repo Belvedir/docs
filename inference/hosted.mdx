@@ -32,6 +32,10 @@ const res = await client.chat.completions.create({
 
 Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap agent runs in `withSession`. Spans arrive with the hosted model name, so local, hosted and cloud-provider calls stay distinguishable in the dashboard.
 
+## 4. Register the endpoint for the router (optional)
+
+If your project uses [model routing](/api-reference/route), register the deployment's base URL and provider key under **Cloud Inference** in the dashboard. Calls the router sends to that model then execute on your endpoint with your key: this is how the router serves your fine-tuned and self-hosted models, and those calls are metered for the usage graphs but never billed.
+
 > Note: unlike local models, the hosted provider sees your prompts; the usual data-handling considerations for a cloud provider apply.
 
 ## Testing a fine-tuned model without a provider
