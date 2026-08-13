@@ -64,7 +64,26 @@ await loop.withSession(
 
 Without `withSession` you still get raw traces, but they can't be linked into sessions or segmented into tasks.
 
-## 5. View your tasks & groups
+## 5. Use your Belvedir API key for inference
+
+Belvedir can also execute your LLM calls: point your OpenAI-compatible client at the router endpoint and use your Belvedir key in place of the provider key. Two lines change; the client works exactly as before.
+
+```ts
+const client = new openai.OpenAI({
+  baseURL: "https://platform.belvedir.ai/api/v1/route",
+  apiKey: process.env.BELVEDIR_API_KEY, // was OPENAI_API_KEY
+});
+
+const res = await client.chat.completions.create({
+  // Your usual model; a configured router overrides it.
+  model: "openai/gpt-4o-mini",
+  messages,
+});
+```
+
+Until your project has a [router](/api-reference/route) configured, the endpoint is a plain metered proxy that honors the `model` you pass, so this swap is safe to ship first. Once routing is configured, Belvedir picks the model per request (your fine-tuned models included), runs the call, and bills your organization at cost.
+
+## 6. View your tasks & groups
 
 Traces appear in the dashboard within seconds. About 30s after a session goes quiet, it's segmented. Open the **Tasks** tab to see each task, and **Groups** to see tasks of the same type gathered together.
 
