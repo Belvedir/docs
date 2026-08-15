@@ -42,6 +42,12 @@ initialize({
 
 Requires `belvedir` (or its alias `@belvedir/loop`, any version, or the deprecated `@fractalresearch/loop@0.1.3` or later). **Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
 
+## Conversations captured, but the last assistant reply is missing
+
+Streamed responses used to be the culprit: when an app called an OpenAI-compatible endpoint with raw `fetch` and `stream: true` (common in agent frameworks that ship their own HTTP client), the request's message history was recorded but the streamed completion never was — so a conversation's final assistant turn only appeared once a later turn embedded it in history, and a session's very last reply was lost.
+
+Fixed in `belvedir@0.4.0` (Node) and `belvedir==0.6.0` (Python): `initialize()` also instruments raw HTTP — `globalThis.fetch` in Node, `requests`/`httpx` in Python — for `POST .../chat/completions` calls, accumulating streamed deltas in the background and recording the full assistant message, tool calls, and usage when the stream ends. Update with `npm install belvedir@latest` / `pip install -U belvedir`. If you're pinned below those versions, route the call through the `openai` client (patched via `instrumentModules` in Node) instead of raw HTTP.
+
 ## Traces show up but no tasks or groups
 
 Tasks and groups only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.

@@ -4,7 +4,7 @@ sidebarTitle: "Configuration"
 description: "Learn how to configure the Belvedir SDK: set your API key, platform base URL, application name, and control span batching behavior."
 ---
 
-Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, `disable_batch`); `instrumentModules` is Node-only.
+Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, `disable_batch`, `instrument_http` — the Python name for `instrumentFetch`, covering raw `requests`/`httpx`); `instrumentModules` is Node-only.
 
 | Option | Description |
 | --- | --- |
@@ -13,6 +13,7 @@ Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, 
 | `appName` | Your application name. Used to label traces. |
 | `disableBatch` | Send spans immediately instead of batching. Useful for testing. |
 | `instrumentModules` | Your imported LLM SDKs, e.g. `{ openAI: openai.OpenAI, anthropic }`. Patches the modules directly instead of relying on require hooks; required in Next.js and other bundled or ESM environments. |
+| `instrumentFetch` | Node, 0.4.0+. Capture LLM calls made with raw `fetch` to OpenAI-compatible endpoints (`POST .../chat/completions`), including streamed responses: deltas are accumulated in the background and the final assistant message, tool calls, and usage land on the span when the stream ends. Defaults to `true`; set `false` to opt out. Other requests pass through untouched. |
 
 ## SDK API
 
