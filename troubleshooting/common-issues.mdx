@@ -8,6 +8,10 @@ description: "Resolve the most common reasons LLM traces aren't appearing in you
 
 Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `platform.belvedir.ai` (also served on `belvedir.ai`). Pointing `baseUrl` at any other host returns a 404 and the spans are dropped silently: the SDK keeps running and your app shows no error, but nothing is ever stored. Safest is to omit `baseUrl` entirely, since it defaults to `https://platform.belvedir.ai`.
 
+## `initialize() failed` warning mentioning `parseKeyPairsIntoRecord` (Node)
+
+A dependency conflict in `belvedir@0.3.1`: two incompatible OpenTelemetry generations could end up in one install, and `initialize()` failed with `Cannot read properties of undefined (reading 'parseKeyPairsIntoRecord')`. Initialization failures never crash your app, so the only symptom is that console warning and zero spans. Fixed in 0.3.2: run `npm install belvedir@latest` (delete `package-lock.json`'s pinned 0.3.1 entry or run `npm update belvedir` if the lockfile keeps the old version).
+
 ## Traces silently missing after July 2026
 
 SDK versions before `@fractalresearch/loop@0.1.5` / `fractal-loop 0.1.1` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `@belvedir/loop` / `belvedir-loop`, or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`.
@@ -36,7 +40,7 @@ initialize({
 });
 ```
 
-Requires `belvedir` (or its alias `@belvedir/loop`, any version, or the deprecated `@fractalresearch/loop@0.1.3` or later). **Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
+Requires `belvedir` (or its alias `@belvedir/loop`, any version, or the deprecated `@fractalresearch/loop@0.1.3` or later). **Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
 
 ## Traces show up but no tasks or groups
 
