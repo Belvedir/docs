@@ -14,6 +14,13 @@ belvedir projects
 
 `belvedir login` opens the Belvedir dashboard, where you're usually already signed in — click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json`, refreshes automatically, and `belvedir logout` forgets it.
 
+## Operating systems
+
+The CLI runs anywhere Node 18+ does: macOS, Linux, and Windows.
+
+- **Windows** needs `@belvedir/cli` 0.3.3 or newer for browser sign-in; older versions crash while opening the browser. Update with `npm install -g @belvedir/cli`. Credentials are stored at `.config\belvedir\credentials.json` under your user profile folder (set `XDG_CONFIG_HOME` to relocate them on any OS).
+- **Headless or remote machines** (SSH, containers): if no browser opens, copy the approve URL the terminal prints into a browser on any device; the terminal keeps polling until you click **Approve**.
+
 ## Reading your data
 
 ```bash

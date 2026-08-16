@@ -17,4 +17,30 @@ If your code runs inside a Belvedir [benchmark](/benchmarks/overview) sandbox, e
 
 ## Local development
 
-Set the vars in `.env.local` (Next.js) or export them in your shell. If traces aren't arriving, check your terminal for SDK warnings on startup and verify `BELVEDIR_API_KEY` is loaded before `initialize()` runs.
+Set the vars in `.env.local` (Next.js) or in your shell. The shell syntax depends on your operating system:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    export BELVEDIR_API_KEY=bv_live_...
+    ```
+
+    Add the line to `~/.zshrc` or `~/.bashrc` to persist it across terminal sessions.
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:BELVEDIR_API_KEY = "bv_live_..."
+    ```
+
+    That sets it for the current terminal only. To persist it, run `setx BELVEDIR_API_KEY "bv_live_..."` and open a new terminal.
+  </Tab>
+  <Tab title="Windows (cmd)">
+    ```bat
+    set BELVEDIR_API_KEY=bv_live_...
+    ```
+  </Tab>
+</Tabs>
+
+`.env` files work the same on every OS (`BELVEDIR_API_KEY=bv_live_...`, no `export`), so they're the most portable option for a team on mixed machines.
+
+If traces aren't arriving, check your terminal for SDK warnings on startup and verify `BELVEDIR_API_KEY` is loaded before `initialize()` runs.
