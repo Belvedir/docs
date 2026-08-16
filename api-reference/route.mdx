@@ -4,7 +4,7 @@ sidebarTitle: "POST /route"
 description: "Ask Belvedir which model should serve a call, decided from your project's routing config and task groups. Deterministic and fast (no model call)."
 ---
 
-Asks which model should serve a call, decided from the project's Routing config (default model, optional strong model, per-task-group overrides) plus a lexical match against your task groups and a complexity score on the request. Deterministic and fast; no model call is made. Same API-key auth as ingest.
+Asks which model should serve a call, decided from the project's Routing config — size-tier defaults (Big for hard requests, Medium for the bulk, Small for quick simple calls) plus per-task assignments — using a lexical match against your task groups and a complexity score on the request. Deterministic and fast; no model call is made. Same API-key auth as ingest.
 
 - **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
 - **Body**: `{ "messages": [...] }` or `{ "task": "summarize this doc" }`, plus an optional `"session_id"`.
@@ -22,7 +22,7 @@ Asks which model should serve a call, decided from the project's Routing config 
 }
 ```
 
-`tier` is `"group"` when a pinned task group matched, `"strong"` when the complexity score crossed the escalation threshold, `"pinned"` when an earlier decision for the same `session_id` was replayed, else `"default"`. Every new project starts with a Default router (GLM 5.2 serves, clearly hard requests escalate to Claude Fable 5), so a fresh project routes from day one. An unconfigured project (an older one, or one whose routers were deleted) gets `configured: false` (never an error), so the call is safe to ship before any dashboard config exists; keep a local fallback model.
+`tier` is `"group"` when an assigned task matched, `"strong"` when the complexity score crossed the escalation threshold (the Big model), `"small"` when the request scored simple enough for the Small model, `"pinned"` when an earlier decision for the same `session_id` was replayed, else `"default"` (the Medium model). Every new project starts with a Default router — Medium GLM 5.2 serves the bulk, clearly hard requests take Big (Claude Fable 5), quick simple calls take Small (Qwen 3.5 9B) — so a fresh project routes from day one. An unconfigured project (an older one, or one whose routers were deleted) gets `configured: false` (never an error), so the call is safe to ship before any dashboard config exists; keep a local fallback model.
 
 ## Session pinning
 

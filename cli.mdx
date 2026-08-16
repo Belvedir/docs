@@ -76,7 +76,7 @@ belvedir repos add my-agent you/agent     # project repository access
 belvedir models download <model-id>       # signed adapter URL
 belvedir deploy <model-id>                # Together deploy, start to endpoint
 belvedir billing payg my-org              # save a pay-as-you-go card
-belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --threshold 0.5
+belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --small Qwen/Qwen3.5-9B --threshold 0.5
 belvedir routing pin my-agent <group-id> qwen3:4b
 belvedir routing routers my-agent         # all routers: production + drafts
 belvedir routing promote <router-id>      # switch which router serves traffic
