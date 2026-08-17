@@ -75,12 +75,12 @@ const client = new openai.OpenAI({
 });
 
 const res = await client.chat.completions.create({
-  model: "auto", // the router picks; never hard-code a provider model here
+  model: "auto", // production router picks; a real model id = ceiling for the call
   messages,
 });
 ```
 
-Every project starts with a [router](/api-reference/route), so Belvedir picks the model per request (your fine-tuned models included), runs the call, and bills your organization at cost. Pass `model: "auto"` and let it decide: naming a specific provider model here does nothing to the routing, but it does label every trace with a model that never ran. Only a project whose routers were all deleted honors an explicit `model`, as a plain metered proxy.
+Every project starts with a production [router](/api-reference/route), so Belvedir picks the model per request (your fine-tuned models included), runs the call, and bills your organization at cost. `model: "auto"` lets the production router decide. Naming a real model (say `x-ai/grok-4.6`) routes through a router anchored on that model, created on first use: the named model is the ceiling and cheaper tiers serve the easier calls underneath, so existing code that names different models keeps working and gets a router per model on the Routing page. The response's `model` tells you what actually ran. Only a project whose routers were all deleted forwards an explicit `model` as-is.
 
 ## 6. View your tasks & groups
 
