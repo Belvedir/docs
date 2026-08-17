@@ -75,12 +75,12 @@ const client = new openai.OpenAI({
 });
 
 const res = await client.chat.completions.create({
-  model: "auto", // production router picks; a real model id = ceiling for the call
+  model: "x-ai/grok-4.6", // unchanged: the model this call already used
   messages,
 });
 ```
 
-Every project starts with a production [router](/api-reference/route), so Belvedir picks the model per request (your fine-tuned models included), runs the call, and bills your organization at cost. `model: "auto"` lets the production router decide. Naming a real model (say `x-ai/grok-4.6`) routes through a router anchored on that model, created on first use: the named model is the ceiling and cheaper tiers serve the easier calls underneath, so existing code that names different models keeps working and gets a router per model on the Routing page. The response's `model` tells you what actually ran. Only a project whose routers were all deleted forwards an explicit `model` as-is.
+Do this for every LLM client in your app: keep the model each call already names, change only the base URL and key. The first call naming a model creates a [router](/api-reference/route) anchored on it (Routing page, "From your code"): that model is the ceiling, and cheaper tiers serve the easier calls underneath, so your app runs on the models it chose and pays less when a smaller model is enough. Belvedir runs the call and bills your organization at cost. Every project also has a production router; `model: "auto"` hands a call to it outright. The response's `model` tells you what actually ran.
 
 ## 6. View your tasks & groups
 
