@@ -75,13 +75,12 @@ const client = new openai.OpenAI({
 });
 
 const res = await client.chat.completions.create({
-  // Your usual model; a configured router overrides it.
-  model: "openai/gpt-4o-mini",
+  model: "auto", // the router picks; never hard-code a provider model here
   messages,
 });
 ```
 
-Until your project has a [router](/api-reference/route) configured, the endpoint is a plain metered proxy that honors the `model` you pass, so this swap is safe to ship first. Once routing is configured, Belvedir picks the model per request (your fine-tuned models included), runs the call, and bills your organization at cost.
+Every project starts with a [router](/api-reference/route), so Belvedir picks the model per request (your fine-tuned models included), runs the call, and bills your organization at cost. Pass `model: "auto"` and let it decide: naming a specific provider model here does nothing to the routing, but it does label every trace with a model that never ran. Only a project whose routers were all deleted honors an explicit `model`, as a plain metered proxy.
 
 ## 6. View your tasks & groups
 
