@@ -52,4 +52,41 @@ const res = await router.chat.completions.create(
 - **Billing**: routed calls bill your organization per token at the rates on the platform's Pricing page (Inference → Pricing), attributed to the calling API key. Compression savings are yours automatically, since billing meters the tokens the model actually received. Credits are used first; with pay as you go on, usage beyond them is charged to the organization owner's card hourly, for exactly what was used. An organization with no credits and no pay as you go gets `402` before any model is called. Streamed responses that the client aborts are billed on an estimate of what was streamed.
 - **Rate limit**: 5 requests/second sustained per API key with a burst of 60; beyond that the endpoint returns `429`. Retry after a short backoff.
 
+## POST /api/v1/route/batches: batch inference at half price
+
+For offline work (classification, evals, backfills, summarizing a corpus) Anthropic and OpenAI both sell an **asynchronous batch tier at 50% of list price**, with results within 24 hours. Belvedir fronts both behind one endpoint, in the same OpenAI chat-completions shape the router speaks.
+
+```bash
+# Submit (≤ 1,000 requests; each names an anthropic/* or OpenAI model — never "auto")
+curl -X POST https://platform.belvedir.ai/api/v1/route/batches \
+  -H "Authorization: Bearer $BELVEDIR_API_KEY" -H "Content-Type: application/json" \
+  -d '{"requests":[
+    {"custom_id":"doc-1","body":{"model":"anthropic/claude-sonnet-5","max_tokens":300,
+      "messages":[{"role":"user","content":"Summarize: ..."}]}},
+    {"custom_id":"doc-2","body":{"model":"gpt-5.2",
+      "messages":[{"role":"user","content":"Summarize: ..."}]}}
+  ]}'
+# → {"id":"<batch-id>","object":"batch","status":"in_progress","request_count":2,
+#    "providers":[{"provider":"anthropic","status":"in_progress","request_count":1},
+#                 {"provider":"openai","status":"in_progress","request_count":1}], ...}
+
+# Poll — refreshes the provider batches and, once all have ended, pulls and stores the results
+curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id> -H "Authorization: Bearer $BELVEDIR_API_KEY"
+
+# Results — one OpenAI chat.completion per custom_id, in any order (409 while still in progress)
+curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id>/results -H "Authorization: Bearer $BELVEDIR_API_KEY"
+# → {"object":"list","batch_id":"...","status":"ended",
+#    "data":[{"custom_id":"doc-1","status":"succeeded","model":"anthropic/claude-sonnet-5",
+#             "response":{"choices":[{"message":{"role":"assistant","content":"..."}}],"usage":{...}}},
+#            {"custom_id":"doc-2","status":"errored","response":null,"error":{"message":"..."}}]}
+
+# List the project's recent batches
+curl https://platform.belvedir.ai/api/v1/route/batches -H "Authorization: Bearer $BELVEDIR_API_KEY"
+```
+
+- **Models**: only Anthropic (`anthropic/*`) and OpenAI (`gpt-*`, `openai/*`) ids — the other backends have no batch tier. Batches are not routed; a request naming `"auto"` or a model without a batch API is rejected up front with a clear message. A batch mixing Claude and GPT models is split into one provider batch per backend and returned as one result list.
+- **Shape**: request bodies are OpenAI chat-completions bodies (messages, tools, `response_format` json_schema, images). Anthropic requests are translated to the Messages API on the way in and results translated back, so every result is an OpenAI `chat.completion` regardless of provider. `max_tokens` defaults to 4096 on Anthropic requests that omit it. Streaming isn't supported.
+- **Timing**: most batches finish in minutes; the providers guarantee 24 hours. Polling the status endpoint completes the batch as soon as the providers are done; an hourly sweep finishes any batch you stop polling.
+- **Billing**: batches bill at the batch rate — half of the router's per-token price — when they end, attributed to the calling API key and shown as "Router (batch)" on the usage page. The same credit gate applies at submission (`402` when the organization is out of credits with pay as you go off).
+
 See [Model Routing](/inference/mixture-of-models) for the full integration pattern.
