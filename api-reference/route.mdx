@@ -54,7 +54,7 @@ const res = await router.chat.completions.create(
 
 ## POST /api/v1/route/batches: batch inference at half price
 
-For offline work (classification, evals, backfills, summarizing a corpus) Anthropic and OpenAI both sell an **asynchronous batch tier at 50% of list price**, with results within 24 hours. Belvedir fronts both behind one endpoint, in the same OpenAI chat-completions shape the router speaks.
+For offline work (classification, evals, backfills, summarizing a corpus) Anthropic and OpenAI both sell an **asynchronous batch tier at 50% of list price**, with results within 24 hours, and Sail Research runs a deferred **flex** completion window at a lower rate. Belvedir fronts all three behind one endpoint, in the same OpenAI chat-completions shape the router speaks.
 
 ```bash
 # Submit (≤ 1,000 requests; each names an anthropic/* or OpenAI model — never "auto")
@@ -84,9 +84,9 @@ curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id>/results -H "Au
 curl https://platform.belvedir.ai/api/v1/route/batches -H "Authorization: Bearer $BELVEDIR_API_KEY"
 ```
 
-- **Models**: only Anthropic (`anthropic/*`) and OpenAI (`gpt-*`, `openai/*`) ids — the other backends have no batch tier. Batches are not routed; a request naming `"auto"` or a model without a batch API is rejected up front with a clear message. A batch mixing Claude and GPT models is split into one provider batch per backend and returned as one result list.
+- **Models**: Anthropic (`anthropic/*`), OpenAI (`gpt-*`, `openai/*`), and Sail-served models (`zai-org/GLM-5.2-FP8`) — the OpenRouter-served catalog has no batch tier. Batches are not routed; a request naming `"auto"` or a model without a batch tier is rejected up front with a clear message. A batch mixing providers is split into one provider batch per backend and returned as one result list. Sail requests run on Sail's flex window and are worked through a slice at a time on each status poll and by the hourly sweep.
 - **Shape**: request bodies are OpenAI chat-completions bodies (messages, tools, `response_format` json_schema, images). Anthropic requests are translated to the Messages API on the way in and results translated back, so every result is an OpenAI `chat.completion` regardless of provider. `max_tokens` defaults to 4096 on Anthropic requests that omit it. Streaming isn't supported.
 - **Timing**: most batches finish in minutes; the providers guarantee 24 hours. Polling the status endpoint completes the batch as soon as the providers are done; an hourly sweep finishes any batch you stop polling.
-- **Billing**: batches bill at the batch rate — half of the router's per-token price — when they end, attributed to the calling API key and shown as "Router (batch)" on the usage page. The same credit gate applies at submission (`402` when the organization is out of credits with pay as you go off).
+- **Billing**: batches bill at the batch rate — half of the router's per-token price for Anthropic and OpenAI, Sail's flex rate for Sail; the Pricing page lists them under **Batch inference** — when they end, attributed to the calling API key and shown as "Router (batch)" on the usage page. The same credit gate applies at submission (`402` when the organization is out of credits with pay as you go off).
 
 See [Model Routing](/inference/mixture-of-models) for the full integration pattern.
