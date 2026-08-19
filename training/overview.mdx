@@ -14,17 +14,17 @@ Successful tasks that captured both an input and an output, shown as the example
 
 Three ways to turn the same dataset into an adapter, picked per run:
 
-- **Supervised fine-tuning** (\$10.00) teaches the model to reproduce your successful outputs directly (the default and the cheapest).
-- **On-policy self-distillation** (\$20.00) lets the model generate its own answers and nudges each one toward what a teacher (the same model shown the known-good output) would have said, so it learns from its own mistakes instead of copying.
-- **Reinforcement learning** (\$30.00) generates answers and trains on a score: either an LLM judge grading each sample against your reference outputs, or a cheaper similarity reward. RL runs use GRPO or PPO; leave the algorithm on Auto and Belvedir picks the better fit for your reward and dataset size.
+- **Supervised fine-tuning** teaches the model to reproduce your successful outputs directly (the default and the cheapest).
+- **On-policy self-distillation** lets the model generate its own answers and nudges each one toward what a teacher (the same model shown the known-good output) would have said, so it learns from its own mistakes instead of copying.
+- **Reinforcement learning** generates answers and trains on a score: either an LLM judge grading each sample against your reference outputs, or a cheaper similarity reward. RL runs use GRPO or PPO; leave the algorithm on Auto and Belvedir picks the better fit for your reward and dataset size.
 
 ## Base models
 
-Small open models that fit a single GPU: Qwen 2.5 7B / 1.5B Instruct, and Llama 3.1 8B Instruct. Llama is gated on HuggingFace, so it asks for an HF token; the token is passed to the training sandbox only and never stored.
+Small open models that fit a single GPU: Qwen 2.5 7B Instruct, Llama 3.1 8B Instruct, and Qwen 3.5 9B (trained on Tinker). Llama is gated on HuggingFace, so it asks for an HF token; the token is passed to the training sandbox only and never stored.
 
-## Runs are metered
+## Runs are free right now
 
-Each training run is charged to your organization's balance when it starts (the method prices above). Failed runs (a launch that never boots, a crash, a timeout) are refunded automatically; you only pay for runs that produce an adapter. Runs are capped at 2 hours; typical runs finish well under that. With Pay as You Go enabled (Organization Settings → Billing), a short balance charges the owner's saved card instead of blocking the run.
+Training runs are not billed at the moment: only inference is (routed calls and hosted inference sessions). Runs are capped at 2 hours; typical runs finish well under that.
 
 ## Auto-training
 
