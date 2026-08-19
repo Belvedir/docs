@@ -1,12 +1,13 @@
 ---
 title: "POST /api/v1/traces: Ingest OpenTelemetry Spans"
 sidebarTitle: "POST /traces"
-description: "Send OpenTelemetry trace data to Belvedir in OTLP JSON format. This endpoint powers the trace analysis dashboard and is called automatically by the SDK."
+description: "Send OpenTelemetry trace data to Belvedir as OTLP over HTTP (protobuf or JSON). This endpoint powers the trace analysis dashboard and is called automatically by the SDK."
 ---
 
-Receives OpenTelemetry trace data in OTLP JSON format. This is called automatically by the SDK.
+Receives OpenTelemetry trace data over OTLP/HTTP. This is called automatically by the SDK, and any stock OpenTelemetry exporter can target it too (see [Agents without the SDK](/guides/otel-agents)).
 
 - **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
-- **Body**: OTLP JSON with a `resourceSpans` array.
+- **Body**: an OTLP `ExportTraceServiceRequest`, either JSON (`Content-Type: application/json`, a `resourceSpans` array) or protobuf (`Content-Type: application/x-protobuf`). `Content-Encoding: gzip` is accepted.
+- **Optional header** `x-belvedir-session-from: trace`: spans without a session id are assigned their trace id as the session, so exporters that never stamp sessions still segment into tasks.
 
-Traces tagged with a session id from `withSession` are grouped into sessions and segmented into tasks; untagged spans still land but can't be linked or segmented.
+Traces tagged with a session id (`withSession` in the SDK, or a `session.id` / `gen_ai.conversation.id` span attribute from other exporters) are grouped into sessions and segmented into tasks; untagged spans still land but can't be linked or segmented.

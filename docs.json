@@ -44,6 +44,7 @@
             "pages": [
               "guides/nextjs",
               "guides/vercel",
+              "guides/otel-agents",
               "guides/environment-variables"
             ]
           },

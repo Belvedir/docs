@@ -1,0 +1,88 @@
+---
+title: "Trace Agents Without the SDK (OpenClaw, Hermes, Any OpenTelemetry Exporter)"
+sidebarTitle: "Agents without the SDK"
+description: "Point any OpenTelemetry exporter at Belvedir's OTLP/HTTP ingest endpoint. Ready-made configs for OpenClaw and Hermes Agent, plus the generic environment-variable setup."
+---
+
+Running an agent you didn't write, like [OpenClaw](https://docs.openclaw.ai) or [Hermes Agent](https://github.com/NousResearch/hermes-agent)? You don't need the Belvedir SDK. The ingest endpoint is a standard OTLP/HTTP trace receiver:
+
+- **Endpoint**: `https://platform.belvedir.ai/api/v1/traces`
+- **Auth**: your `bv_live_...` key in an `x-api-key` header (or as a Bearer token)
+- **Wire formats**: `http/protobuf` and `http/json`, gzip accepted
+- **Content**: spans that follow the OpenTelemetry GenAI conventions (`gen_ai.input.messages` / `gen_ai.output.messages`) show up as full conversations
+- **Sessions**: read from a `session.id` or `gen_ai.conversation.id` span attribute. Send the header `x-belvedir-session-from: trace` to treat every trace as its own session when the exporter doesn't stamp one
+
+Only traces are ingested. There are no metrics or logs endpoints, so turn those signals off or point them elsewhere.
+
+## OpenClaw
+
+Install the official exporter plugin, then configure it in `openclaw.json`. It speaks `http/protobuf` and omits session ids on purpose, so add the session-from-trace header: each agent turn becomes one session. Set `captureContent: true`, or the spans carry token counts but no messages and nothing can be segmented into tasks.
+
+```bash
+openclaw plugins install @openclaw/diagnostics-otel
+```
+
+The exporter runs inside the Gateway. Restart the Gateway after changing the config, and note that turns run with `openclaw agent --local` bypass the Gateway and export nothing.
+
+```json5
+{
+  diagnostics: {
+    enabled: true,
+    otel: {
+      enabled: true,
+      protocol: "http/protobuf",
+      tracesEndpoint: "https://platform.belvedir.ai/api/v1/traces",
+      headers: {
+        "x-api-key": "bv_live_...",
+        "x-belvedir-session-from": "trace",
+      },
+      traces: true,
+      metrics: false,
+      logs: false,
+      captureContent: true,
+    },
+  },
+  plugins: {
+    allow: ["diagnostics-otel"],
+    entries: { "diagnostics-otel": { enabled: true } },
+  },
+}
+```
+
+## Hermes Agent
+
+Install and enable the community [hermes-otel](https://github.com/briancaffey/hermes-otel) plugin and add Belvedir as a generic OTLP backend. It stamps `session.id` on every span, so Hermes sessions become Belvedir sessions as-is.
+
+```bash
+hermes plugins install briancaffey/hermes-otel
+hermes plugins enable hermes_otel
+pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+```
+
+In `~/.hermes/plugins/hermes_otel/config.yaml` (the plugin reads this path even when `HERMES_HOME` is set elsewhere). The capture flags lift the default 1,200-character preview clip so full prompts and replies arrive:
+
+```yaml
+enabled: true
+capture_conversation_history: true
+capture_full_prompts: true
+capture_full_responses: true
+backends:
+  - type: otlp
+    name: belvedir
+    endpoint: https://platform.belvedir.ai/api/v1/traces
+    headers:
+      x-api-key: bv_live_...
+    metrics: false
+```
+
+## Any other OpenTelemetry SDK
+
+The stock OTLP/HTTP trace exporter works with environment variables alone. Add the session header if your agent doesn't set `session.id`:
+
+```bash
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://platform.belvedir.ai/api/v1/traces
+OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="x-api-key=bv_live_...,x-belvedir-session-from=trace"
+```
+
+Traffic is attributed to the API key in the header like SDK traffic, so you can filter by it on the Data pages. Tasks appear about 30 seconds after a session goes quiet.
