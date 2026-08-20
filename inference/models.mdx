@@ -18,9 +18,14 @@ Served directly on Anthropic's API.
 | --- | --- |
 | Claude Fable 5 | `anthropic/claude-fable-5` |
 | Claude Opus 5 | `anthropic/claude-opus-5` |
+| Claude Opus 4.8 | `anthropic/claude-opus-4-8` |
+| Claude Opus 4.7 | `anthropic/claude-opus-4-7` |
+| Claude Opus 4.6 | `anthropic/claude-opus-4-6` |
 | Claude Sonnet 5 | `anthropic/claude-sonnet-5` |
 | Claude Sonnet 4.6 | `anthropic/claude-sonnet-4-6` |
 | Claude Haiku 4.5 | `anthropic/claude-haiku-4-5` |
+
+Every model Anthropic's API serves works here, not just the table: the older Claude Opus 4.5 (`anthropic/claude-opus-4-5`) and Claude Sonnet 4.5 (`anthropic/claude-sonnet-4-5`) are served and priced too, and dated snapshot ids resolve to the same rates.
 
 ## OpenAI
 
@@ -41,6 +46,8 @@ Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is 
 | GPT-4o | `gpt-4o` |
 | GPT-4o mini | `gpt-4o-mini` |
 
+Beyond the table, every chat model OpenAI's API serves works here and is priced at OpenAI's list: the GPT-5.5 and GPT-5.4 families, GPT-5.1, the pro models (`gpt-5.2-pro`, `gpt-5-pro`, ...), the codex and chat-latest variants, the o-series (`o1`, `o3`, `o3-mini`, `o4-mini`), and the legacy line back through `gpt-4-turbo`, `gpt-4`, and `gpt-3.5-turbo`.
+
 ## xAI
 
 Served through OpenRouter, priced from the provider's reported cost per call.
@@ -54,6 +61,12 @@ Served through OpenRouter, priced from the provider's reported cost per call.
 | Model | Identifier | Served on |
 | --- | --- | --- |
 | GLM 5.2 | `zai-org/GLM-5.2-FP8` | Sail Research (American compute) |
+| Kimi K2.6 | `moonshotai/Kimi-K2.6` | Sail Research (American compute) |
+| DeepSeek V4 Flash | `deepseek/deepseek-v4-flash-0731` | Sail Research (American compute) |
+| gpt-oss 120B | `openai/gpt-oss-120b` | Sail Research (American compute) |
+| Gemma 4 31B | `google/gemma-4-31B-it` | Sail Research (American compute) |
+| Qwen 3.6 35B | `Qwen/Qwen3.6-35B-A3B` | Sail Research (American compute) |
+| Nemotron 3 Super 120B | `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16` | Sail Research (American compute) |
 | Qwen 3.5 9B | `Qwen/Qwen3.5-9B` | OpenRouter |
 | Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | OpenRouter |
 | Llama 3.2 3B Instruct | `meta-llama/Llama-3.2-3B-Instruct` | OpenRouter |
