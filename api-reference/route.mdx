@@ -55,6 +55,43 @@ const res = await router.chat.completions.create(
 - **Thinking models**: when a call lands on a reasoning model (GLM 5.2, Qwen 3.5) and its `max_tokens` is under 2,048, or it routed to the Small tier, Belvedir turns thinking off for that call so the budget goes to the answer instead of an unfinished reasoning trace. Set `reasoning`, `reasoning_effort`, or `chat_template_kwargs` yourself to override. Your setting wins on the attempt itself, with one backstop: if the model then spends the whole completion budget on reasoning and returns an empty answer, Belvedir retries the call once with thinking off rather than bill you for nothing — the response carries `x-belvedir-retry: thinking-disabled` when that happened (and no retry happens if your own setting already had thinking off).
 - **Rate limit**: 5 requests/second sustained per API key with a burst of 60; beyond that the endpoint returns `429`. Retry after a short backoff.
 
+## POST /api/v1/messages: Anthropic-native passthrough
+
+Claude traffic that leans on Anthropic-native features does not have to flatten into the OpenAI shape. `POST /api/v1/messages` serves the **Messages API, untranslated**: point the official Anthropic SDK at Belvedir and requests pass through to Anthropic byte-faithfully.
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  baseURL: "https://platform.belvedir.ai/api", // the SDK appends /v1/messages
+  apiKey: process.env.BELVEDIR_API_KEY,        // your bv_live_ key
+});
+// Everything else is unchanged — cache_control, thinking, tools, streaming.
+```
+
+What passes through intact:
+
+- **Prompt caching**: `cache_control` breakpoints (per-block and top-level) reach Anthropic unmodified, and the cache-read discount flows through to your bill. Verify fidelity yourself by reading `usage.cache_read_input_tokens` off responses, exactly as you would against Anthropic directly. Cache writes bill at Anthropic's published 1.25× (5-minute) / 2× (1-hour) write premiums.
+- **Thinking**: adaptive thinking, `display` settings, thinking blocks in responses and streams — Belvedir never injects or strips a thinking config on this surface.
+- **`anthropic-beta` headers**: forwarded verbatim (fast mode, compaction, context management, and future betas work without waiting on Belvedir). Fast-mode calls bill at Anthropic's published fast rate.
+- **Streaming**: Anthropic's native event shape (`message_start`, `content_block_delta`, `message_delta`), byte-for-byte. A frontend that parses Anthropic SSE keeps working unchanged.
+- **The Claude Agent SDK**: it honors the same env vars for all its traffic, subagents included — set `ANTHROPIC_BASE_URL=https://platform.belvedir.ai/api` and `ANTHROPIC_API_KEY=<bv_live_ key>` and its inference routes through Belvedir.
+
+Rules of the surface: it is **model-pinned by design** — pass a real Claude model id (bare `claude-*` or `anthropic/*`; Sail-served open models work here too via Sail's Anthropic-compatible API); `"auto"` and routing live on the OpenAI-compatible endpoint above. Errors come back in Anthropic's error envelope so the SDK's typed errors work. What the call cost rides the `x-belvedir-cost` response header (the body is never rewritten); every token is metered from the native usage object, cache writes and fast mode included, at the rates on the Pricing page. Same key auth, spend gate, and 5 req/s limit as the router.
+
+**What no router can carry**: Anthropic's Managed Agents / Agent API sessions run their inference inside Anthropic's own orchestration — there is no base URL to override, for Belvedir or anyone else. Instrument those workloads with the Belvedir SDK for observability instead.
+
+## POST /api/v1/route/embeddings: OpenAI-compatible embeddings
+
+`embeddings.create` against the router base URL passes through to OpenAI on Belvedir's key: `text-embedding-3-small`, `text-embedding-3-large`, and `text-embedding-ada-002` (with or without the `openai/` prefix). Input tokens are metered at list price like every routed call; the cost rides the `x-belvedir-cost` header. Embeddings are model-pinned — there is nothing to route.
+
+```ts
+const res = await router.embeddings.create({
+  model: "text-embedding-3-small",
+  input: ["first document", "second document"],
+});
+```
+
 ## POST /api/v1/route/batches: batch inference at half price
 
 For offline work (classification, evals, backfills, summarizing a corpus) Anthropic and OpenAI both sell an **asynchronous batch tier at 50% of list price**, with results within 24 hours, and Sail Research runs a deferred **flex** completion window at a lower rate. Belvedir fronts all three behind one endpoint, in the same OpenAI chat-completions shape the router speaks.
@@ -89,7 +126,8 @@ curl https://platform.belvedir.ai/api/v1/route/batches -H "Authorization: Bearer
 ```
 
 - **Models**: Anthropic (`anthropic/*`), OpenAI (`gpt-*`, `openai/*`), and Sail-served models (`zai-org/GLM-5.2-FP8`) — the OpenRouter-served catalog has no batch tier. Batches are not routed; a request naming `"auto"` or a model without a batch tier is rejected up front with a clear message. A batch mixing providers is split into one provider batch per backend and returned as one result list. Sail requests run on Sail's flex window and are worked through a slice at a time on each status poll and by the hourly sweep.
-- **Shape**: request bodies are OpenAI chat-completions bodies (messages, tools, `response_format` json_schema, images). Anthropic requests are translated to the Messages API on the way in and results translated back, so every result is an OpenAI `chat.completion` regardless of provider. `max_tokens` defaults to 4096 on Anthropic requests that omit it. Streaming isn't supported.
+- **Shape**: request bodies are OpenAI chat-completions bodies (messages, tools, `response_format` json_schema, images). Anthropic requests are translated to the Messages API on the way in — `cache_control` markers and a `thinking` config on the body survive the translation — and results translated back, so every result is an OpenAI `chat.completion` regardless of provider. `max_tokens` defaults to 4096 on Anthropic requests that omit it. Streaming isn't supported.
+- **Anthropic-native shape**: a request may send `{"custom_id", "params"}` instead of `{"custom_id", "body"}` — the same wire shape Anthropic's own Message Batches API takes, forwarded verbatim (`cache_control`, `thinking`, native content blocks intact), and that request's result carries the **native Anthropic message** instead of a translated `chat.completion`. The two shapes can mix in one batch. Native params are accepted for Anthropic and Sail-served models (not OpenAI ids).
 - **Timing**: most batches finish in minutes; the providers guarantee 24 hours. Polling the status endpoint completes the batch as soon as the providers are done; an hourly sweep finishes any batch you stop polling.
 - **Billing**: batches bill at the batch rate — half of the router's per-token price for Anthropic and OpenAI, Sail's flex rate for Sail; the Pricing page lists them under **Batch inference** — when they end, attributed to the calling API key and shown as "Router (batch)" on the usage page. Every model in a batch must be a priced model (the Pricing page lists them; an unpriced id is refused with `400`). At submission the organization's balance must cover a rough estimate of the batch (request text plus `max_tokens` at the batch rate) unless the organization is on pay as you go; otherwise the endpoint returns `402` with the estimate, and you can add credits or split the batch. Submissions are limited to a burst of 10 and one per 10 seconds per API key (`429`); polling and results are not limited.
 
