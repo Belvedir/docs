@@ -53,7 +53,8 @@
             "pages": [
               "inference/local-models",
               "inference/hosted",
-              "inference/mixture-of-models"
+              "inference/mixture-of-models",
+              "inference/models"
             ]
           },
           {

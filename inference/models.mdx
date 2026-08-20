@@ -1,0 +1,73 @@
+---
+title: "Available Models"
+description: "Every model the Belvedir router can serve, with the identifier to use in your calls and routing configs."
+sidebarTitle: "Available Models"
+---
+
+These are the models the [router inference endpoint](/api-reference/route) can execute, with the identifier you pass as `model` (or pick in a routing config on the Routing page). Per-token prices for all of them live on the platform's Pricing page (**Inference → Pricing**); prices are not repeated here so they can't go stale.
+
+## Identifier spelling
+
+Belvedir uses provider-prefixed identifiers for every provider except OpenAI, whose bare `gpt-*` ids are the convention. Bare ids from provider-native SDKs are normalized server-side (`claude-sonnet-5` → `anthropic/claude-sonnet-5`, `grok-4.6` → `x-ai/grok-4.6`, `gemini-*` → `google/*`, `mistral-*` → `mistralai/*`, `deepseek-*` → `deepseek/*`), so a call site migrated from another SDK keeps working with the id it already names.
+
+## Anthropic
+
+Served directly on Anthropic's API.
+
+| Model | Identifier |
+| --- | --- |
+| Claude Fable 5 | `anthropic/claude-fable-5` |
+| Claude Opus 5 | `anthropic/claude-opus-5` |
+| Claude Sonnet 5 | `anthropic/claude-sonnet-5` |
+| Claude Sonnet 4.6 | `anthropic/claude-sonnet-4-6` |
+| Claude Haiku 4.5 | `anthropic/claude-haiku-4-5` |
+
+## OpenAI
+
+Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is also accepted. Any current OpenAI chat id (`gpt-*`, `chatgpt-*`, o-series) routes here; the priced line-up:
+
+| Model | Identifier |
+| --- | --- |
+| GPT-5.6 Sol | `gpt-5.6-sol` |
+| GPT-5.6 Terra | `gpt-5.6-terra` |
+| GPT-5.6 Luna | `gpt-5.6-luna` |
+| GPT-5.2 | `gpt-5.2` |
+| GPT-5 | `gpt-5` |
+| GPT-5 mini | `gpt-5-mini` |
+| GPT-5 nano | `gpt-5-nano` |
+| GPT-4.1 | `gpt-4.1` |
+| GPT-4.1 mini | `gpt-4.1-mini` |
+| GPT-4.1 nano | `gpt-4.1-nano` |
+| GPT-4o | `gpt-4o` |
+| GPT-4o mini | `gpt-4o-mini` |
+
+## xAI
+
+Served through OpenRouter, priced from the provider's reported cost per call.
+
+| Model | Identifier |
+| --- | --- |
+| Grok 4.6 | `x-ai/grok-4.6` |
+
+## Open models
+
+| Model | Identifier | Served on |
+| --- | --- | --- |
+| GLM 5.2 | `zai-org/GLM-5.2-FP8` | Sail Research (American compute) |
+| Qwen 3.5 9B | `Qwen/Qwen3.5-9B` | OpenRouter |
+| Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | OpenRouter |
+| Llama 3.2 3B Instruct | `meta-llama/Llama-3.2-3B-Instruct` | OpenRouter |
+
+Beyond this list, **any OpenRouter model id** works as a pass-through: the call executes on OpenRouter and bills at OpenRouter's reported cost for that call.
+
+If your organization has **Chinese models** turned off under Project Permissions, Chinese-lab identifiers (Qwen, GLM, DeepSeek, Kimi) are unavailable for that project: the router never picks one, and a call naming one returns a clear error.
+
+## Batch tier
+
+Models served on Anthropic, OpenAI, and Sail also have a deferred [batch tier](/api-reference/route) at half of list price. OpenRouter-served models have no batch tier.
+
+## Your own models
+
+- **Local models** (Ollama-style `name:tag` ids such as `qwen3:4b`, `llama3.1:8b`, `gpt-oss:20b`): the [decision endpoint](/api-reference/route) can route to them, but your app executes the call; the inference endpoint returns a clear `400` for them.
+- **Fine-tuned models** (your project's trained models, by name): same rule; the decision endpoint routes to them and your app serves them.
+- **Bring your own provider**: register a model id with your own base URL and key under **Cloud Inference** in the dashboard, and the inference endpoint executes that id on your endpoint instead — metered but never billed. This lifts the `400` for local and fine-tuned ids too.
