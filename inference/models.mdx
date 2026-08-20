@@ -51,11 +51,7 @@ Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is 
 | GPT-5.4 | `gpt-5.4` |
 | GPT-5.4 mini | `gpt-5.4-mini` |
 | GPT-5.4 nano | `gpt-5.4-nano` |
-| GPT-5.3 chat | `gpt-5.3-chat-latest` |
-| GPT-5.2 chat | `gpt-5.2-chat-latest` |
 | GPT-5.1 | `gpt-5.1` |
-| GPT-5.1 chat | `gpt-5.1-chat-latest` |
-| GPT-5 chat | `gpt-5-chat-latest` |
 | o1 | `o1` |
 | o3 | `o3` |
 | o3 mini | `o3-mini` |
@@ -64,7 +60,7 @@ Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is 
 | GPT-4 | `gpt-4` |
 | GPT-3.5 Turbo | `gpt-3.5-turbo` |
 
-That is every chat model OpenAI's API serves, at OpenAI's list prices; dated snapshot ids resolve to the same rates. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak, so those return a clear error naming the base model to use instead.
+That is every callable chat model OpenAI's API serves, at OpenAI's list prices; dated snapshot ids resolve to the same rates. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak, and the versioned chat-latest ids are deprecated on OpenAI's side; both return a clear error naming the base model to use instead.
 
 ## xAI
 
