@@ -51,28 +51,21 @@ The exporter runs inside the Gateway. Restart the Gateway after changing the con
 
 ## Hermes Agent
 
-Install and enable the community [hermes-otel](https://github.com/briancaffey/hermes-otel) plugin and add Belvedir as a generic OTLP backend. It stamps `session.id` on every span, so Hermes sessions become Belvedir sessions as-is.
+Install our [hermes-belvedir](https://github.com/Belvedir/hermes-belvedir) plugin. It has zero Python dependencies: nothing to `pip install`, no dependency tree for a security scanner to flag, and few enough lines to review before enabling, as Hermes' security policy asks. It stamps `session.id` on every span, so multi-turn Hermes sessions become Belvedir sessions as-is.
 
 ```bash
-hermes plugins install briancaffey/hermes-otel
-hermes plugins enable hermes_otel
-pip install opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+hermes plugins install Belvedir/hermes-belvedir
+hermes plugins enable hermes_belvedir
+
+export BELVEDIR_API_KEY=bv_live_...
 ```
 
-In `~/.hermes/plugins/hermes_otel/config.yaml` (the plugin reads this path even when `HERMES_HOME` is set elsewhere). The capture flags lift the default 1,200-character preview clip so full prompts and replies arrive:
+That's the whole setup. Each turn appears within seconds: the conversation the model saw, its replies, tool calls with results, and token usage per request. Full prompts and responses are captured by default; set `BELVEDIR_PRIVACY_MODE=true` to send usage and structure only. Configuration is environment-first (`BELVEDIR_API_KEY`, `BELVEDIR_ENDPOINT`, `BELVEDIR_PRIVACY_MODE`, `BELVEDIR_CAPTURE_SENDER`), with an optional `config.json` next to the installed plugin.
 
-```yaml
-enabled: true
-capture_conversation_history: true
-capture_full_prompts: true
-capture_full_responses: true
-backends:
-  - type: otlp
-    name: belvedir
-    endpoint: https://platform.belvedir.ai/api/v1/traces
-    headers:
-      x-api-key: bv_live_...
-    metrics: false
+To confirm the wiring without running the agent, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session:
+
+```bash
+BELVEDIR_API_KEY=bv_live_... python3 ~/.hermes/plugins/hermes_belvedir/tests/simulate_session.py
 ```
 
 ## Any other OpenTelemetry SDK
