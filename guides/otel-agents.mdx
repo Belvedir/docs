@@ -16,37 +16,33 @@ Only traces are ingested. There are no metrics or logs endpoints, so turn those 
 
 ## OpenClaw
 
-Install the official exporter plugin, then configure it in `openclaw.json`. It speaks `http/protobuf` and omits session ids on purpose, so add the session-from-trace header: each agent turn becomes one session. Set `captureContent: true`, or the spans carry token counts but no messages and nothing can be segmented into tasks.
+Install our [openclaw-belvedir](https://github.com/Belvedir/openclaw-belvedir) plugin. It has zero dependencies (plain JavaScript on Node built-ins, nothing for a security scanner to flag) and, unlike OpenClaw's stock OTel exporter, it stamps OpenClaw's real session identity on every span: a multi-turn conversation becomes one Belvedir session instead of one session per turn, with none of the housekeeping-trace noise.
 
 ```bash
-openclaw plugins install @openclaw/diagnostics-otel
+openclaw plugins install git:github.com/Belvedir/openclaw-belvedir
 ```
 
-The exporter runs inside the Gateway. Restart the Gateway after changing the config, and note that turns run with `openclaw agent --local` bypass the Gateway and export nothing.
+In `~/.openclaw/openclaw.json`, then restart the Gateway (`openclaw gateway restart`):
 
-```json5
+```json
 {
-  diagnostics: {
-    enabled: true,
-    otel: {
-      enabled: true,
-      protocol: "http/protobuf",
-      tracesEndpoint: "https://platform.belvedir.ai/api/v1/traces",
-      headers: {
-        "x-api-key": "bv_live_...",
-        "x-belvedir-session-from": "trace",
-      },
-      traces: true,
-      metrics: false,
-      logs: false,
-      captureContent: true,
-    },
-  },
-  plugins: {
-    allow: ["diagnostics-otel"],
-    entries: { "diagnostics-otel": { enabled: true } },
-  },
+  "plugins": {
+    "allow": ["belvedir"],
+    "entries": {
+      "belvedir": {
+        "enabled": true,
+        "config": { "apiKey": "bv_live_..." },
+        "hooks": { "allowConversationAccess": true }
+      }
+    }
+  }
 }
+```
+
+`hooks.allowConversationAccess` is OpenClaw's consent gate for message content: without it the plugin still runs but only structure and timing arrive, and nothing can be segmented into tasks. Set `BELVEDIR_PRIVACY_MODE=true` (or `config.privacyMode`) to send usage and structure only. To confirm the wiring without spending model tokens, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session and prints the session id to look for on the Data pages:
+
+```bash
+BELVEDIR_API_KEY=bv_live_... node ~/.openclaw/extensions/belvedir/tests/simulate-run.js
 ```
 
 ## Hermes Agent
