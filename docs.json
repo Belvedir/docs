@@ -54,7 +54,8 @@
               "inference/local-models",
               "inference/hosted",
               "inference/mixture-of-models",
-              "inference/models"
+              "inference/models",
+              "inference/capabilities"
             ]
           },
           {

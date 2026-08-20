@@ -1,0 +1,84 @@
+---
+title: "Capabilities and Limits"
+description: "What Belvedir inference can and cannot do: the four serving surfaces, what each supports, the models they execute, and every hard limit."
+sidebarTitle: "Capabilities & Limits"
+---
+
+Belvedir serves inference on four surfaces, all behind the same `bv_live_` API key. This page is the honest summary of what each one can and cannot do; the full mechanics (request shapes, headers, billing) live in the [API reference](/api-reference/route).
+
+## The four surfaces
+
+| Endpoint | Speaks | Use it for |
+| --- | --- | --- |
+| [`POST /api/v1/route/chat/completions`](/api-reference/route#post-apiv1routechatcompletions-let-the-router-make-the-call) | OpenAI chat completions | Live inference, routed (`"auto"`) or anchored on the model your code names |
+| [`POST /api/v1/messages`](/api-reference/route#post-apiv1messages-anthropic-native-passthrough) | Anthropic Messages API, untranslated | Claude traffic that leans on native features: prompt caching, thinking, beta headers, the Claude Agent SDK |
+| [`POST /api/v1/route/embeddings`](/api-reference/route#post-apiv1routeembeddings-openai-compatible-embeddings) | OpenAI embeddings | OpenAI `text-embedding-*` models |
+| [`POST /api/v1/route/batches`](/api-reference/route#post-apiv1routebatches-batch-inference-at-half-price) | OpenAI chat bodies, or Anthropic-native params | Deferred bulk work at the half-price batch tier, results within 24 hours |
+
+A fifth endpoint, [`POST /api/v1/route`](/api-reference/route), makes the routing **decision only** and executes nothing: use it when your own code runs the model (local models, your own provider accounts).
+
+## What each surface supports
+
+| Capability | Chat completions | Messages passthrough | Batches |
+| --- | --- | --- | --- |
+| Streaming | Yes: SSE passed through byte-for-byte, usage on the final chunk | Yes: Anthropic's native event stream, untouched | No: `stream: true` is rejected with `400` |
+| Tool calling | Yes, passed through unchanged | Yes, native | Yes |
+| Structured output | Yes: `response_format` passes through | Yes: `output_config`, native | Yes: `response_format` json_schema is translated for Anthropic models |
+| Images in prompts | Yes, wherever the upstream model supports them | Yes, native content blocks | Yes, including base64 data URLs |
+| Thinking / reasoning controls | Yes; your setting always wins on the attempt, with the backstops below | Yes, never injected or stripped | Yes: a `thinking` config survives translation |
+| Prompt caching | Provider-dependent; cached tokens bill at the cache-read rate | Yes: `cache_control` reaches Anthropic unmodified, discount flows to your bill | Yes: `cache_control` markers survive |
+| Routing (`"auto"`, tiers, task groups) | Yes | No: model-pinned by design | No: every request names its model |
+| Session pinning | Yes: `x-session-id` header or `session_id` body field | No | Not applicable |
+| Prompt compression | Yes (per-project toggle) | No: the body is never touched | No |
+| Per-call cost | `usage.cost` on the body and `x-belvedir-cost` header | `x-belvedir-cost` header (the body is never rewritten) | Per-result `cost` in the results list |
+
+## Models each surface executes
+
+The full catalog with identifiers is on [Available Models](/inference/models). In summary:
+
+- **Chat completions**: every Claude model, every callable OpenAI chat model, the Sail-served open models (GLM 5.2, Kimi K2.6, DeepSeek V4 Flash, gpt-oss 120B, Gemma 4 31B), Grok, and any OpenRouter model id as a pass-through. Model ids you registered under **Cloud Inference** execute on your own endpoint (metered, never billed).
+- **Messages passthrough**: Claude models, plus Sail-served open models through Sail's Anthropic-compatible API. Nothing else; other ids get a `400` pointing at the OpenAI-compatible endpoint.
+- **Embeddings**: OpenAI's `text-embedding-3-small`, `text-embedding-3-large`, and `text-embedding-ada-002` only.
+- **Batches**: Anthropic models (up to 100,000 requests per batch), OpenAI models (up to 50,000), and the three Sail-served models with a flex window: GLM 5.2, Kimi K2.6, and Gemma 4 31B (up to 1,000). One batch can mix providers.
+
+## What Belvedir cannot do
+
+Each of these fails fast with a clear error rather than an opaque upstream failure:
+
+- **Local models** (Ollama-style `name:tag` ids) and **your project's fine-tuned models** are never executed by the router: `400`. Use the decision endpoint and run the call yourself, or register a deployment under **Cloud Inference**, which lifts the restriction.
+- **OpenAI's Responses API**: the router speaks chat completions only, so OpenAI's pro and codex families return `400` naming the base chat model to use instead.
+- **Anthropic Managed Agents / Agent API sessions** run their inference inside Anthropic's own orchestration; there is no base URL to override, for Belvedir or anyone else. Instrument those workloads with the Belvedir SDK for observability instead.
+- **No routing on the Messages passthrough or in batches**: both surfaces are model-pinned; `"auto"` returns `400`. Routing lives on the chat-completions endpoint.
+- **Unpriced models on Anthropic, OpenAI, or Sail** return `400` (OpenRouter ids are exempt: OpenRouter reports the cost per call, so they bill correctly).
+- **No batch tier for OpenRouter-served models**, and no batches for the Sail models without a flex window (DeepSeek V4 Flash, gpt-oss 120B, the NVFP4 Gemma variant).
+- **No streaming inside batches**, and Anthropic-native `params` bodies are not accepted for OpenAI models.
+- **No token-counting, files, image generation, audio, or realtime APIs**: the surfaces above are text-in, text-out chat, embeddings, and batches.
+- **Chinese-lab models when the project turned them off** (Project Permissions): `403` on every surface, never a silent substitution.
+
+## Reliability backstops
+
+Three server-side retries protect you from paying for empty answers; when one fired, the response says so in the `x-belvedir-retry` header:
+
+- **`thinking-disabled`**: a reasoning model spent the whole completion budget on its thinking trace and returned an empty answer (`finish_reason: "length"`). Belvedir retries once, same model, thinking off. This fires even when your own reasoning setting caused it: your control wins on the first attempt, but an empty paid answer beats honoring it twice.
+- **`content-filter-fallback`**: a model's safety filter returned an empty answer for a prompt the router chose it for. Belvedir retries on your routing config's other tiers, cheapest suitable first. Only when the router picked the model: if your code named it, you get that model's verdict.
+- A model that rejects Belvedir's own thinking-off override with `400` (some models cannot run with thinking disabled) is retried once without the override; your own reasoning settings are never the trigger for this one.
+
+The first attempt is still metered on the first two: you pay for what the provider ran, and the retry saves the call.
+
+## Operational limits
+
+| Limit | Value |
+| --- | --- |
+| Request body: chat completions | 1 MB |
+| Request body: Messages passthrough | 20 MB |
+| Request body: embeddings | 4 MB |
+| Request body: batch submission | 100 MB |
+| Rate: chat, messages, embeddings | 5 requests/second sustained per API key, burst 60 |
+| Rate: batch submissions | 1 per 10 seconds per API key, burst 10 (polling and results unlimited) |
+| Live call duration | 5 minutes end to end; stream long generations |
+| Batch size | 100,000 requests per batch (Anthropic cap; 50,000 OpenAI, 1,000 Sail per provider portion) |
+| Batch `custom_id` | 1–64 characters, unique per batch |
+| Batch `idempotency_key` | Up to 128 characters, unique per project |
+| Session pin lifetime | 24 hours |
+
+Beyond the rate limits the endpoints return `429`; retry after a short backoff. When shared batch capacity is momentarily full, submission returns a retryable `503` with `Retry-After`.
