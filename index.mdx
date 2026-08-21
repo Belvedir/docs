@@ -8,19 +8,37 @@ Belvedir is an observability and auto-improvement platform for LLM agents. Insta
 
 ## Where to start
 
-- [Quickstart](/quickstart): get traces flowing in under 5 minutes with the Node SDK.
-- [Python SDK](/sdk/python): same concepts, context managers instead of callbacks.
-- [How It Works](/how-it-works): the six-stage pipeline (instrument, collect, segment, group, clean, optimize).
-- [Importing Traces](/importing-traces): bring history over from LangSmith, Langfuse, Phoenix, Braintrust, or a file.
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/quickstart">
+    Get traces flowing in under 5 minutes with the Node SDK.
+  </Card>
+  <Card title="Python SDK" href="/sdk/python">
+    Same concepts, context managers instead of callbacks.
+  </Card>
+  <Card title="How it works" href="/how-it-works">
+    The six-stage pipeline: instrument, collect, segment, group, clean, optimize.
+  </Card>
+  <Card title="Agents without the SDK" href="/guides/otel-agents">
+    Point any OpenTelemetry exporter at Belvedir: OpenClaw, Hermes, or your own.
+  </Card>
+</CardGroup>
 
 ## What you can do
 
-- **Trace** every LLM and tool call from OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more.
-- **Segment** sessions into tasks automatically and gather similar tasks into groups.
-- **Optimize** with [harness evolution and prompt evolution](/training/optimization-loops) loops that open PRs against your GitHub repo, and [LoRA fine-tuning](/training/overview) on your traces.
-- **Benchmark** any agent harness in an isolated CPU or GPU sandbox against SWE-bench, τ-bench, GAIA, and more.
-- **Train** open models on your successful production traffic and download the LoRA adapter.
-- **Route** each call to the model that fits it with [Model Routing](/inference/mixture-of-models).
+<CardGroup cols={2}>
+  <Card title="Trace" href="/sdk/supported-providers">
+    Every LLM and tool call from OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more. Sessions segment into tasks; similar tasks gather into groups.
+  </Card>
+  <Card title="Route" href="/inference/mixture-of-models">
+    Send each call to the model that fits it, decided from your own task groups, and let the record of what worked pick the cheapest model that wins.
+  </Card>
+  <Card title="Optimize" href="/training/optimization-loops">
+    Harness evolution and prompt evolution loops that feed on production traces and open PRs against your repo, plus LoRA finetuning on your successful traffic.
+  </Card>
+  <Card title="Benchmark" href="/benchmarks/overview">
+    Run any agent harness in an isolated CPU or GPU sandbox against SWE-bench, τ-bench, GAIA, and more, or environments generated from your own groups.
+  </Card>
+</CardGroup>
 
 ## Supported runtimes
 

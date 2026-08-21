@@ -25,9 +25,7 @@
             "pages": [
               "index",
               "quickstart",
-              "how-it-works",
-              "importing-traces",
-              "cli"
+              "how-it-works"
             ]
           },
           {
@@ -36,7 +34,8 @@
               "sdk/installation",
               "sdk/configuration",
               "sdk/supported-providers",
-              "sdk/python"
+              "sdk/python",
+              "guides/environment-variables"
             ]
           },
           {
@@ -45,14 +44,14 @@
               "guides/nextjs",
               "guides/vercel",
               "guides/otel-agents",
-              "guides/environment-variables"
+              "inference/local-models",
+              "inference/hosted",
+              "importing-traces"
             ]
           },
           {
             "group": "Inference",
             "pages": [
-              "inference/local-models",
-              "inference/hosted",
               "inference/mixture-of-models",
               "inference/models",
               "inference/capabilities"
@@ -73,8 +72,9 @@
             ]
           },
           {
-            "group": "Troubleshooting",
+            "group": "Resources",
             "pages": [
+              "cli",
               "troubleshooting/common-issues",
               "troubleshooting/faq"
             ]
