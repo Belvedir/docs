@@ -56,3 +56,5 @@ Every new project starts with a Default router (GLM 5.2 serves, clearly hard req
 ## Tune it from production data
 
 Every span still records the model that served it, so Belvedir builds a per-group record of how each model actually performs on that kind of work. The Routing page shows each group's observed success rates per model, that model's newest score in the group's generated environment when one exists, and a one-click **auto-pick** recommendation: the cheapest model whose observed success rate is within a few points of the best. Apply it and save — the loop's fine-tuned specialists earn traffic the same way, by winning on the record.
+
+With **Outcome routing** on (Project Permissions), the record decides by itself: recognized task groups you haven't assigned a model to serve machine-shaped requests with the auto-pick winner live, as tier `group-record`, and requests with a strict JSON output contract can be served by the Small tier first with mechanical validation and automatic escalation. Details on the [router endpoint page](/api-reference/route).

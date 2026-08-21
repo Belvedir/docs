@@ -32,6 +32,8 @@ A fifth endpoint, [`POST /api/v1/route`](/api-reference/route), makes the routin
 | Prompt compression | Yes (per-project toggle) | No: the body is never touched | No |
 | Per-call cost | `usage.cost` on the body and `x-belvedir-cost` header | `x-belvedir-cost` header (the body is never rewritten) | Per-result `cost` in the results list |
 
+Two opt-in behaviors extend the chat-completions surface under the **Outcome routing** toggle (Project Permissions): recognized task groups can be served by the cheapest model still winning their observed production record (tier `group-record`), and machine-shaped requests with a strict JSON output contract can be served by the Small tier first with mechanical validation and escalation (`x-belvedir-cascade` header). Both are documented with the [router endpoint](/api-reference/route).
+
 ## Models each surface executes
 
 The full catalog with identifiers is on [Available Models](/inference/models). In summary:
