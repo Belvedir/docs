@@ -25,7 +25,7 @@ A fifth endpoint, [`POST /api/v1/route`](/api-reference/route), makes the routin
 | Tool calling | Yes, passed through unchanged | Yes, native | Yes |
 | Structured output | Yes: `response_format` passes through | Yes: `output_config`, native | Yes: `response_format` json_schema is translated for Anthropic models |
 | Images in prompts | Yes, wherever the upstream model supports them | Yes, native content blocks | Yes, including base64 data URLs |
-| Thinking / reasoning controls | Yes; your setting always wins on the attempt, with the backstops below | Yes, never injected or stripped | Yes: a `thinking` config survives translation |
+| Thinking / reasoning controls | Yes, translated per routed model: `reasoning_effort` is clamped to the vocabulary the serving model accepts, and an off setting (`none`, `minimal`, `enable_thinking: false`, `thinking: {"type": "disabled"}`) becomes that backend's working off-switch. Graded effort levels are honored on OpenAI reasoning models and open models that support them; Claude models served through this surface ignore graded effort (only off translates), and Claude Fable always thinks. Backstops below | Yes, never injected or stripped | Yes: a `thinking` config survives translation |
 | Prompt caching | Provider-dependent; cached tokens bill at the cache-read rate | Yes: `cache_control` reaches Anthropic unmodified, discount flows to your bill | Yes: `cache_control` markers survive |
 | Routing (`"auto"`, tiers, task groups) | Yes | No: model-pinned by design | No: every request names its model |
 | Session pinning | Yes: `x-session-id` header or `session_id` body field | No | Not applicable |
@@ -63,7 +63,7 @@ Three server-side retries protect you from paying for empty answers; when one fi
 
 - **`thinking-disabled`**: a reasoning model spent the whole completion budget on its thinking trace and returned an empty answer (`finish_reason: "length"`). Belvedir retries once, same model, thinking off. This fires even when your own reasoning setting caused it: your control wins on the first attempt, but an empty paid answer beats honoring it twice.
 - **`content-filter-fallback`**: a model's safety filter returned an empty answer for a prompt the router chose it for. Belvedir retries on your routing config's other tiers, cheapest suitable first. Only when the router picked the model: if your code named it, you get that model's verdict.
-- A model that rejects Belvedir's own thinking-off override with `400` (some models cannot run with thinking disabled) is retried once without the override; your own reasoning settings are never the trigger for this one.
+- A model that rejects a thinking-off switch with `400` (some models cannot run with thinking disabled) is retried once without it. The switch may be Belvedir's own or the translation of your off setting: the router picks the serving model, so a rejection isn't something your code can fix.
 
 The first attempt is still metered on the first two: you pay for what the provider ran, and the retry saves the call.
 
