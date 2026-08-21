@@ -116,13 +116,13 @@ curl -X POST https://platform.belvedir.ai/api/v1/route/batches \
 # Poll — refreshes the provider batches and, once all have ended, pulls and stores the results
 curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id> -H "Authorization: Bearer $BELVEDIR_API_KEY"
 
-# Results — one OpenAI chat.completion per custom_id, in any order (409 while still in progress)
+# Results — JSONL, one result per custom_id per line, in any order (409 while still in progress)
 curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id>/results -H "Authorization: Bearer $BELVEDIR_API_KEY"
-# → {"object":"list","batch_id":"...","status":"ended",
-#    "data":[{"custom_id":"doc-1","status":"succeeded","model":"anthropic/claude-sonnet-5","cost":0.00021,
-#             "response":{"choices":[{"message":{"role":"assistant","content":"..."}}],
-#                         "usage":{"prompt_tokens":412,"completion_tokens":38,"total_tokens":450,"cost":0.00021}}},
-#            {"custom_id":"doc-2","status":"errored","response":null,"error":{"message":"..."}}]}
+# → {"custom_id":"doc-1","status":"succeeded","model":"anthropic/claude-sonnet-5","cost":0.00021,"response":{...}}
+# → {"custom_id":"doc-2","status":"errored","response":null,"error":{"message":"..."}}
+# ?format=anthropic → Anthropic's exact results JSONL (all-native-params batches)
+# ?format=openai    → OpenAI's exact batch-output JSONL (all-body batches)
+# ?format=json      → one {"object":"list","batch_id":"...","data":[...]} envelope
 
 # List the project's recent batches
 curl https://platform.belvedir.ai/api/v1/route/batches -H "Authorization: Bearer $BELVEDIR_API_KEY"
@@ -134,6 +134,7 @@ curl -X POST https://platform.belvedir.ai/api/v1/route/batches/<batch-id>/cancel
 ```
 
 - **Models**: Anthropic (`anthropic/*`), OpenAI (`gpt-*`, `openai/*`), and the Sail-served models with a flex window — `zai-org/GLM-5.2-FP8`, `moonshotai/Kimi-K2.6`, `google/gemma-4-31B-it`; the other Sail models are interactive-only, and the OpenRouter-served catalog has no batch tier. Batches are not routed; a request naming `"auto"` or a model without a batch tier is rejected up front with a clear message. A batch mixing providers is split into one provider batch per backend and returned as one result list. Sail requests run on Sail's flex window and are worked through a slice at a time on each status poll and by the hourly sweep — which is why the Sail portion of a batch caps at 1,000 requests (Belvedir drives them itself; the caps for Anthropic and OpenAI are the providers' own).
+- **Results format**: JSONL by default — one result object per line, parseable in constant memory at any batch size; batch id/status ride `x-belvedir-batch-id` / `x-belvedir-batch-status` headers. Code migrated from a provider's own batch API keeps its results parser verbatim: `?format=anthropic` returns Anthropic's exact results structure (batches submitted entirely as native `params`), `?format=openai` returns OpenAI's batch output structure (batches submitted entirely as OpenAI bodies); a mixed batch gets a clear `400` for provider formats. `?format=json` wraps everything in a single JSON envelope for small batches. The response stamps `x-belvedir-results-format`.
 - **Cancellation**: `POST /api/v1/route/batches/{id}/cancel` forwards the cancel to the providers' real cancel endpoints (and immediately drops Sail's still-pending work). Provider semantics are preserved: requests that already completed still return results and still bill; everything not yet run comes back `canceled` in the results list. Idempotent — canceling twice or canceling an ended batch returns the batch's current state.
 - **Shape**: request bodies are OpenAI chat-completions bodies (messages, tools, `response_format` json_schema, images). Anthropic requests are translated to the Messages API on the way in — `cache_control` markers and a `thinking` config on the body survive the translation — and results translated back, so every result is an OpenAI `chat.completion` regardless of provider. `max_tokens` defaults to 4096 on Anthropic requests that omit it. Streaming isn't supported.
 - **Large submissions**: inline request bodies over ~4 MB are rejected at the platform edge with `413`, so big batches submit by reference: `POST /api/v1/route/batches/uploads` returns `{object, upload_url}`; `PUT` the full submission JSON (`{"requests": [...]}`) to `upload_url` with `Content-Type: application/json`, then `POST /api/v1/route/batches` with `{"input_object": "<object>"}` (plus `idempotency_key` if you use one). Validation, reservation, and the response are identical to inline submission. Uploads that never get submitted expire after 48 hours.
