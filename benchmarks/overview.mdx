@@ -91,7 +91,7 @@ Before exiting, write `results.json` at the repo root. A top-level numeric `scor
 
 ## Benchmark a fine-tuned model
 
-GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models. The sandbox is then given extra environment variables: `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, which the harness echoes back as `results.model`), and `HF_TOKEN` for gated bases, so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
+GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models. The sandbox is then given extra environment variables: `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name; the platform records it as `results.model` on the run, so attribution doesn't depend on the harness echoing it), and `HF_TOKEN` for gated bases, so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
 
 ## Limits
 
