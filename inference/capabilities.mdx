@@ -75,8 +75,8 @@ The first attempt is still metered on the first two: you pay for what the provid
 | Request body: Messages passthrough | 20 MB |
 | Request body: embeddings | 4 MB |
 | Request body: batch submission | 100 MB |
-| Rate: chat, messages, embeddings | 5 requests/second sustained per API key, burst 60 |
-| Rate: batch submissions | 1 per 10 seconds per API key, burst 10 (polling and results unlimited) |
+| Rate: chat, messages, embeddings | 25 requests/second sustained per API key, burst 300 |
+| Rate: batch submissions | 30 per minute per API key, burst 30 (polling and results: 60 per minute, burst 120) |
 | Live call duration | 5 minutes end to end; stream long generations |
 | Batch size | 100,000 requests per batch (Anthropic cap; 50,000 OpenAI, 1,000 Sail per provider portion) |
 | Batch `custom_id` | 1–64 characters, unique per batch |
