@@ -25,23 +25,23 @@ A fifth endpoint, [`POST /api/v1/route`](/api-reference/route), makes the routin
 | Tool calling | Yes, passed through unchanged | Yes, native | Yes |
 | Structured output | Yes: `response_format` passes through | Yes: `output_config`, native | Yes: `response_format` json_schema is translated for Anthropic models |
 | Images in prompts | Yes, wherever the upstream model supports them | Yes, native content blocks | Yes, including base64 data URLs |
-| Thinking / reasoning controls | Yes, translated per routed model: `reasoning_effort` is clamped to the vocabulary the serving model accepts, and an off setting (`none`, `minimal`, `enable_thinking: false`, `thinking: {"type": "disabled"}`) becomes that backend's working off-switch. Graded effort levels are honored on OpenAI reasoning models and open models that support them; Claude models served through this surface ignore graded effort (only off translates), and Claude Fable always thinks. Backstops below | Yes, never injected or stripped | Yes: a `thinking` config survives translation |
+| Thinking / reasoning controls | Yes, translated per routed model: `reasoning_effort` is clamped to the vocabulary the serving model accepts, and an off setting (`none`, `minimal`, `enable_thinking: false`, `thinking: {"type": "disabled"}`) becomes that backend's working off-switch. Graded effort levels are honored on OpenAI reasoning models and open models that support them; Claude models served through this surface ignore graded effort (only off translates), and Claude Fable and Mythos always think. Grok is the exception: its reasoning is fixed per model id, so reasoning controls are dropped rather than translated, and the thinking-off backstop doesn't apply. Backstops below | Yes, never injected or stripped | Yes: a `thinking` config survives translation |
 | Prompt caching | Provider-dependent; cached tokens bill at the cache-read rate | Yes: `cache_control` reaches Anthropic unmodified, discount flows to your bill | Yes: `cache_control` markers survive |
-| Routing (`"auto"`, tiers, task groups) | Yes | No: model-pinned by design | No: every request names its model |
+| Routing (`"auto"`, tiers, task groups) | Yes, while the project's **Smart routing** permission is on (the default). Off = every call serves exactly the model it selects, as tier `fixed` | No: model-pinned by design | No: every request names its model |
 | Session pinning | Yes: `x-session-id` header or `session_id` body field | No | Not applicable |
 | Prompt compression | Yes (per-project toggle) | No: the body is never touched | No |
 | Per-call cost | `usage.cost` on the body and `x-belvedir-cost` header | `x-belvedir-cost` header (the body is never rewritten) | Per-result `cost` in the results list |
 
-Two behaviors extend the chat-completions surface under the **Automatic updates** toggle (Project Permissions, on by default): recognized task groups can be served by the cheapest model still winning their observed production record (tier `group-record`), and machine-shaped requests with a strict JSON output contract can be served by the Small tier first with mechanical validation and escalation (`x-belvedir-cascade` header). Both are documented with the [router endpoint](/api-reference/route). With the toggle off, the record still scores every model; the Routing page turns those scores into recommendations you approve before they serve production.
+Two behaviors extend the chat-completions surface under the **Automatic updates** toggle (Project Permissions, on by default): recognized task groups can be served by the cheapest model still winning their observed production record (tier `group-record`), and non-streaming machine-shaped requests with a strict JSON output contract can be served by the Small tier first with mechanical validation and escalation (`x-belvedir-cascade` header; a per-group guardrail stops the cascade anywhere Small keeps losing). Both are documented with the [router endpoint](/api-reference/route). With the toggle off, the record still scores every model; the Routers page turns those scores into recommendations you approve before they serve traffic. Both toggles sit under **Smart routing** (Project Permissions, on by default), the master switch for whether the router may pick the serving model at all: with it off, session pins, tier escalation, group routes, record picks, the cascade, and the content-filter fallback are all inert, and you only ever get the model you selected.
 
 ## Models each surface executes
 
 The full catalog with identifiers is on [Available Models](/inference/models). In summary:
 
-- **Chat completions**: every Claude model, every callable OpenAI chat model, the Sail-served open models (GLM 5.2, Kimi K2.6, DeepSeek V4 Flash, gpt-oss 120B, Gemma 4 31B), Grok, and any OpenRouter model id as a pass-through. Model ids you registered under **Cloud Inference** execute on your own endpoint (metered, never billed).
+- **Chat completions**: every Claude model, every callable OpenAI chat model, the hosted open models (GLM 5.2, Kimi K2.6, DeepSeek V4 Flash, gpt-oss 120B, Gemma 4 31B — interactive calls run on OpenRouter's fastest provider; the NVFP4 Gemma variant runs on Sail Research), Grok (served directly on xAI), and any OpenRouter model id as a pass-through. Model ids you registered under **Cloud Inference** execute on your own endpoint (metered, never billed).
 - **Messages passthrough**: Claude models, plus Sail-served open models through Sail's Anthropic-compatible API. Nothing else; other ids get a `400` pointing at the OpenAI-compatible endpoint.
 - **Embeddings**: OpenAI's `text-embedding-3-small`, `text-embedding-3-large`, and `text-embedding-ada-002` only.
-- **Batches**: Anthropic models (up to 100,000 requests per batch), OpenAI models (up to 50,000), and the three Sail-served models with a flex window: GLM 5.2, Kimi K2.6, and Gemma 4 31B (up to 1,000). One batch can mix providers.
+- **Batches**: Anthropic models (up to 100,000 requests per batch), OpenAI models (up to 50,000), and the three open models with a Sail Research flex window: GLM 5.2, Kimi K2.6, and Gemma 4 31B (up to 1,000; batches for these run on Sail even though interactive calls run on OpenRouter). One batch can mix providers.
 
 ## What Belvedir cannot do
 
@@ -51,7 +51,7 @@ Each of these fails fast with a clear error rather than an opaque upstream failu
 - **OpenAI's Responses API**: the router speaks chat completions only, so OpenAI's pro and codex families return `400` naming the base chat model to use instead.
 - **Anthropic Managed Agents / Agent API sessions** run their inference inside Anthropic's own orchestration; there is no base URL to override, for Belvedir or anyone else. Instrument those workloads with the Belvedir SDK for observability instead.
 - **No routing on the Messages passthrough or in batches**: both surfaces are model-pinned; `"auto"` returns `400`. Routing lives on the chat-completions endpoint.
-- **Unpriced models on Anthropic, OpenAI, or Sail** return `400` (OpenRouter ids are exempt: OpenRouter reports the cost per call, so they bill correctly).
+- **Unpriced models on Anthropic, OpenAI, or Sail** return `400` (OpenRouter and xAI ids are exempt: both report the exact cost per call, so they bill correctly).
 - **No batch tier for OpenRouter-served models**, and no batches for the Sail models without a flex window (DeepSeek V4 Flash, gpt-oss 120B, the NVFP4 Gemma variant).
 - **No streaming inside batches**, and Anthropic-native `params` bodies are not accepted for OpenAI models.
 - **No token-counting, files, image generation, audio, or realtime APIs**: the surfaces above are text-in, text-out chat, embeddings, and batches.
@@ -75,10 +75,11 @@ The first attempt is still metered on the first two: you pay for what the provid
 | Request body: Messages passthrough | 20 MB |
 | Request body: embeddings | 4 MB |
 | Request body: batch submission | 100 MB |
+| Request body: routing decision (`POST /api/v1/route`) | 128 KB |
 | Rate: chat, messages, embeddings | 25 requests/second sustained per API key, burst 300 (default; adjustable per organization on request, including unlimited) |
 | Rate: batch submissions | 30 per minute per API key, burst 30 (polling and results: 60 per minute, burst 120) |
 | Live call duration | 5 minutes end to end; stream long generations |
-| Batch size | 100,000 requests per batch (Anthropic cap; 50,000 OpenAI, 1,000 Sail per provider portion) |
+| Batch size | 100,000 requests per batch (Anthropic cap; 50,000 OpenAI; the Sail portion caps at 1,000 requests and ~2 MB serialized) |
 | Batch `custom_id` | 1–64 characters, unique per batch |
 | Batch `idempotency_key` | Up to 128 characters, unique per project |
 | Session pin lifetime | 24 hours |

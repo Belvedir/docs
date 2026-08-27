@@ -4,11 +4,11 @@ description: "Every model the Belvedir router can serve, with the identifier to 
 sidebarTitle: "Available Models"
 ---
 
-These are the models the [router inference endpoint](/api-reference/route) can execute, with the identifier you pass as `model` (or pick in a routing config on the Routing page). Per-token prices for all of them live on the platform's Pricing page (**Inference → Pricing**); prices are not repeated here so they can't go stale.
+These are the models the [router inference endpoint](/api-reference/route) can execute, with the identifier you pass as `model` (or pick in a routing config on the Routers page). The platform's Pricing page (**Inference → Pricing**) carries the per-token prices for the frontier line-up plus the OpenRouter catalog; ids not on it bill from the provider's reported cost for that call, with the same routed-call discount applied. Prices are not repeated here so they can't go stale.
 
 ## Identifier spelling
 
-Belvedir uses provider-prefixed identifiers for every provider except OpenAI, whose bare `gpt-*` ids are the convention. Bare ids from provider-native SDKs are normalized server-side (`claude-sonnet-5` → `anthropic/claude-sonnet-5`, `grok-4.6` → `x-ai/grok-4.6`, `gemini-*` → `google/*`, `mistral-*` → `mistralai/*`, `deepseek-*` → `deepseek/*`), so a call site migrated from another SDK keeps working with the id it already names.
+Belvedir uses provider-prefixed identifiers for every provider except OpenAI, whose bare `gpt-*` ids are the convention. Bare ids from provider-native SDKs are normalized server-side (`claude-sonnet-5` → `anthropic/claude-sonnet-5`, `grok-4.6` → `x-ai/grok-4.6`, `gemini-*` and `gemma-*` → `google/*`, `mistral-*`, `mixtral-*`, and `codestral-*` → `mistralai/*`, `deepseek-*` → `deepseek/*`), so a call site migrated from another SDK keeps working with the id it already names.
 
 ## Anthropic
 
@@ -60,25 +60,28 @@ Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is 
 | GPT-4 | `gpt-4` |
 | GPT-3.5 Turbo | `gpt-3.5-turbo` |
 
-That is every callable chat model OpenAI's API serves, at OpenAI's list prices; dated snapshot ids resolve to the same rates. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak, and the versioned chat-latest ids are deprecated on OpenAI's side; both return a clear error naming the base model to use instead.
+That is every callable chat model OpenAI's API serves, at OpenAI's list prices; dated snapshot ids and the `-chat-latest` variants resolve to the same rates. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak; they return a clear error naming the base chat model (or a chat-latest variant) to use instead.
 
 ## xAI
 
-Served through OpenRouter, priced from the provider's reported cost per call.
+Served directly on xAI's API, which reports the exact cost per call; that reported cost is what bills. Any model xAI serves works; the current line-up:
 
 | Model | Identifier |
 | --- | --- |
 | Grok 4.6 | `x-ai/grok-4.6` |
+| Grok 4.5 | `x-ai/grok-4.5` |
+| Grok 4.3 | `x-ai/grok-4.3` |
+| Grok Build 0.1 | `x-ai/grok-build-0.1` |
 
 ## Open models
 
 | Model | Identifier | Served on |
 | --- | --- | --- |
-| GLM 5.2 | `zai-org/GLM-5.2-FP8` | Sail Research (American compute) |
-| Kimi K2.6 | `moonshotai/Kimi-K2.6` | Sail Research (American compute) |
-| DeepSeek V4 Flash | `deepseek/deepseek-v4-flash-0731` | Sail Research (American compute) |
-| gpt-oss 120B | `openai/gpt-oss-120b` | Sail Research (American compute) |
-| Gemma 4 31B | `google/gemma-4-31B-it` | Sail Research (American compute) |
+| GLM 5.2 | `zai-org/GLM-5.2-FP8` | OpenRouter (fastest provider) |
+| Kimi K2.6 | `moonshotai/Kimi-K2.6` | OpenRouter (fastest provider) |
+| DeepSeek V4 Flash | `deepseek/deepseek-v4-flash-0731` | OpenRouter (fastest provider) |
+| gpt-oss 120B | `openai/gpt-oss-120b` | OpenRouter (fastest provider) |
+| Gemma 4 31B | `google/gemma-4-31B-it` | OpenRouter (fastest provider) |
 | Gemma 4 31B NVFP4 | `nvidia/Gemma-4-31B-IT-NVFP4` | Sail Research (American compute) |
 | Qwen 3.5 9B | `Qwen/Qwen3.5-9B` | OpenRouter |
 | Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | OpenRouter |
@@ -86,11 +89,11 @@ Served through OpenRouter, priced from the provider's reported cost per call.
 
 Beyond this list, **any OpenRouter model id** works as a pass-through: the call executes on OpenRouter and bills at OpenRouter's reported cost for that call.
 
-If your organization has **Chinese models** turned off under Project Permissions, Chinese-lab identifiers (Qwen, GLM, DeepSeek, Kimi) are unavailable for that project: the router never picks one, and a call naming one returns a clear error.
+If your organization has **Chinese models** turned off under Project Permissions, Chinese-lab identifiers are unavailable for that project: the router never picks one, and a call naming one returns a clear error. The check covers the well-known labs (Qwen, GLM/Z.ai, DeepSeek, Kimi/Moonshot, Yi, MiniMax, Baichuan, InternLM) and the Chinese-lab org prefixes on OpenRouter pass-through ids (ByteDance, Tencent, Baidu, Zhipu, StepFun, Xiaomi, Meituan, and similar), so it applies to the whole catalog, not just the listed models.
 
 ## Batch tier
 
-Models served on Anthropic and OpenAI also have a deferred [batch tier](/api-reference/route) at half of list price, as do three of the Sail-served models: GLM 5.2, Kimi K2.6, and Gemma 4 31B (Sail's flex window). The other Sail models (DeepSeek V4 Flash, gpt-oss 120B, Gemma 4 31B NVFP4) are interactive-only, and OpenRouter-served models have no batch tier. The full can/cannot rundown is on [Capabilities and Limits](/inference/capabilities).
+Models served on Anthropic and OpenAI also have a deferred [batch tier](/api-reference/route) at half of list price, and three of the open models above batch on Sail Research's deferred flex window at its lower flex rate: GLM 5.2, Kimi K2.6, and Gemma 4 31B (interactive calls to these run on OpenRouter; batches run on Sail). The other open models (DeepSeek V4 Flash, gpt-oss 120B, Gemma 4 31B NVFP4) are interactive-only, and the OpenRouter pass-through catalog has no batch tier. The full can/cannot rundown is on [Capabilities and Limits](/inference/capabilities).
 
 ## Your own models
 
