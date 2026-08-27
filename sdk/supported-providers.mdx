@@ -19,4 +19,6 @@ Both SDKs also auto-instrument the LangChain and LlamaIndex frameworks.
 
 Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), self-hosted [vLLM](https://docs.vllm.ai)) work through the OpenAI SDK, and as of `belvedir` 0.4.0 (Node) / 0.6.0 (Python) also through raw `fetch` / `requests` / `httpx` calls to any OpenAI-compatible `chat/completions` endpoint, streamed responses included, with no client SDK at all. See [Cloud Inference](/inference/hosted).
 
+Apps built on the [AI SDK](https://ai-sdk.dev) (the `ai` package) are captured through that same raw-HTTP path when calls use `@ai-sdk/openai-compatible`; its native provider packages (`@ai-sdk/openai`, `@ai-sdk/anthropic`) and built-in gateway routing are not captured. See the [AI SDK guide](/guides/ai-sdk).
+
 For agents you didn't write (OpenClaw, Hermes, or anything that already speaks OpenTelemetry), see [Agents without the SDK](/guides/otel-agents).

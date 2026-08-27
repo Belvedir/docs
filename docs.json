@@ -42,6 +42,7 @@
             "group": "Guides",
             "pages": [
               "guides/nextjs",
+              "guides/ai-sdk",
               "guides/vercel",
               "guides/vercel-ai-gateway",
               "guides/otel-agents",

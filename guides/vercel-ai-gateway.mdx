@@ -23,7 +23,7 @@ const client = new OpenAI({
 
 Initialize the Belvedir SDK exactly as in the [quickstart](/quickstart); it captures these calls regardless of the base URL. Traffic flows app → gateway → provider, and traces flow to Belvedir in parallel.
 
-One caveat: make the calls with an OpenAI-compatible client (the `openai` SDK, or the Vercel AI SDK's OpenAI-compatible provider pointed at the gateway URL). The AI SDK's native gateway wiring (plain `"provider/model"` strings) uses a protocol the Belvedir SDK doesn't instrument, so those calls would arrive as generic spans without prompts or token counts.
+One caveat: make the calls with an OpenAI-compatible client (the `openai` SDK, or the AI SDK's `@ai-sdk/openai-compatible` provider pointed at the gateway URL). The AI SDK's native gateway wiring (plain `"provider/model"` strings) uses a protocol the Belvedir SDK doesn't instrument, so those calls produce no LLM spans. Full setup for AI SDK apps, including this swap, is in the [AI SDK guide](/guides/ai-sdk).
 
 ## Routed inference: chain the router through the gateway
 
