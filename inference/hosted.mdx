@@ -36,6 +36,16 @@ Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap 
 
 If your project uses [model routing](/api-reference/route), register the deployment's base URL and provider key under **Cloud Inference** in the dashboard. Calls the router sends to that model then execute on your endpoint with your key: this is how the router serves your fine-tuned and self-hosted models, and those calls are metered for the usage graphs but never billed.
 
+## Default gateway (optional)
+
+Project settings → **Integrations** can register one OpenAI-compatible gateway for every routed model at once: every call the router executes then runs against your gateway with your key, instead of Belvedir's provider accounts. Use it when you already aggregate AI spend somewhere, such as [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) or an OpenRouter account: your gateway's dashboard sees all traffic and spend, while Belvedir keeps routing, tracing, and metering the calls. See the [Vercel AI Gateway guide](/guides/vercel-ai-gateway) for the end-to-end setup.
+
+Three things to know:
+
+- A per-model registration (section 4) wins over the default gateway for that model, and fine-tuned or local model ids never fall through to it; register those exactly if your gateway serves them.
+- Routed model ids are sent to the gateway in their public spellings. Keep your routers on ids the gateway serves (for Vercel AI Gateway, `provider/model` slugs such as `openai/gpt-5.2`).
+- Calls on your gateway bill on your gateway's account, not your Belvedir balance; Belvedir's usage graphs show their tokens at zero cost.
+
 > Note: unlike local models, the hosted provider sees your prompts; the usual data-handling considerations for a cloud provider apply.
 
 ## Testing a fine-tuned model without a provider

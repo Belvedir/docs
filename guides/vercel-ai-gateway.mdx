@@ -1,0 +1,51 @@
+---
+title: "Using Belvedir with Vercel AI Gateway"
+sidebarTitle: "Vercel AI Gateway"
+description: "Keep all your AI spend visible in Vercel AI Gateway while Belvedir traces your agents, routes your inference, and trains your models."
+---
+
+[Vercel AI Gateway](https://vercel.com/docs/ai-gateway) shows spend for calls that pass through it; it is an inference proxy, not a trace store. So the setup is about traffic flow: keep Belvedir's SDK tracing your agent as usual, and make the inference calls themselves pass through the gateway. Both tools then see everything. Belvedir gets the full traces that feed sessions, tasks, and training; Vercel sees every call's model, tokens, and cost.
+
+Which setup you need depends on whether Belvedir executes your inference.
+
+## Tracing only: call the gateway directly
+
+If your app calls providers itself and uses Belvedir for observability, point your OpenAI client at the gateway and change nothing else:
+
+```ts
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://ai-gateway.vercel.sh/v1",
+  apiKey: process.env.AI_GATEWAY_API_KEY,
+});
+```
+
+Initialize the Belvedir SDK exactly as in the [quickstart](/quickstart); it captures these calls regardless of the base URL. Traffic flows app → gateway → provider, and traces flow to Belvedir in parallel.
+
+One caveat: make the calls with an OpenAI-compatible client (the `openai` SDK, or the Vercel AI SDK's OpenAI-compatible provider pointed at the gateway URL). The AI SDK's native gateway wiring (plain `"provider/model"` strings) uses a protocol the Belvedir SDK doesn't instrument, so those calls would arrive as generic spans without prompts or token counts.
+
+## Routed inference: chain the router through the gateway
+
+If Belvedir [routes and executes](/inference/mixture-of-models) your inference, chain the two: your app calls Belvedir's router, and the router executes every call through your gateway.
+
+1. In the Vercel dashboard, create an AI Gateway API key for the project that should own the spend.
+2. In the Belvedir dashboard, open your project's settings, go to **Integrations**, click the **Vercel AI Gateway** preset on the AI gateway card, and paste the key.
+
+That's the whole setup. Your application code doesn't change; it keeps calling Belvedir's router:
+
+```ts
+const client = new OpenAI({
+  baseURL: "https://platform.belvedir.ai/api/v1/route",
+  apiKey: process.env.BELVEDIR_API_KEY,
+});
+```
+
+Traffic flows app → Belvedir router → your gateway → provider. Belvedir picks the model, traces the call, and meters the tokens; the gateway records the spend on your Vercel account. Because the calls run on your own gateway key, Belvedir bills nothing for them: Vercel becomes your single source of truth for AI spend.
+
+### Notes
+
+- Routed model ids are sent to the gateway in their public spellings, so keep your routers on `provider/model` slugs the gateway serves (`openai/gpt-5.2`, `anthropic/claude-sonnet-5`). A model the gateway doesn't recognize fails with the gateway's error.
+- A per-model endpoint registered on the Cloud Inference page wins over the default gateway for that model. Fine-tuned and local models never fall through to the gateway; register them individually if your gateway serves them.
+- The default gateway applies to routed chat completions. The Anthropic-native Messages passthrough (`/api/v1/messages`) and the embeddings endpoint still execute on their built-in providers.
+- Spend that doesn't pass through the gateway won't appear in Vercel. If completeness matters, route all inference through Belvedir and check the usage pages agree.

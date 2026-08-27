@@ -43,6 +43,7 @@
             "pages": [
               "guides/nextjs",
               "guides/vercel",
+              "guides/vercel-ai-gateway",
               "guides/otel-agents",
               "inference/local-models",
               "inference/hosted",
