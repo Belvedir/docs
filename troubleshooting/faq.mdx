@@ -6,7 +6,7 @@ description: "Answers to common questions about the Belvedir SDK: runtime suppor
 
 ## Which runtimes are supported?
 
-The Node SDK requires the Node.js runtime. The Edge runtime on Vercel and similar platforms won't work because OpenTelemetry needs Node APIs. The Python SDK works anywhere CPython does. See [Vercel](/guides/vercel) for the runtime opt-in.
+The Node SDK requires the Node.js runtime (Node 18+). The Edge runtime on Vercel and similar platforms won't work because OpenTelemetry needs Node APIs. The Python SDK runs on CPython 3.10 or newer. See [Vercel](/guides/vercel) for the runtime opt-in.
 
 ## Do I need to set `baseUrl`?
 
@@ -14,7 +14,7 @@ No. It defaults to `https://platform.belvedir.ai`. Only set it if you're targeti
 
 ## How long until traces appear in the dashboard?
 
-Traces appear within seconds. Tasks and groups form ~30 seconds after a session goes quiet; segmentation only runs once a session is idle.
+Traces appear within seconds. Tasks and training sets form ~30 seconds after a session goes quiet; segmentation only runs once a session is idle.
 
 ## Is my API key safe in `instrumentation.ts`?
 
@@ -22,7 +22,7 @@ Yes, `instrumentation.ts` runs on the server. Never expose `BELVEDIR_API_KEY` to
 
 ## Can I use one project for multiple apps?
 
-Yes. Set a different `appName` per app when calling `initialize()`; traces from each app are labeled and can be filtered in the dashboard.
+Yes. Set a different `appName` per app when calling `initialize()`; each app's traces carry it in their stored metadata. To split apps apart in the dashboard's views, give each app its own API key: the Data pages filter by key.
 
 ## What if my agent uses more than one LLM provider?
 
@@ -34,4 +34,12 @@ Yes, see [Model Routing](/inference/mixture-of-models).
 
 ## Can I tell Belvedir whether a session actually worked?
 
-Yes, report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fail")` (Python: `report_outcome`), or `POST /api/v1/outcomes` directly. A reported fail keeps that session's tasks out of training data. See the [SDK API](/sdk/configuration#sdk-api).
+Yes, report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fail")` (Python: `report_outcome`), or `POST /api/v1/outcomes` directly. A reported fail keeps that session's tasks out of training data. Report after `flush()`: an outcome for a session the platform hasn't ingested yet returns false/404. See the [SDK API](/sdk/configuration#sdk-api).
+
+## What does Belvedir charge for?
+
+Only inference: routed calls through the router endpoints and hosted inference sessions, per token at the rates on the platform's Pricing page (**Inference → Pricing**), drawn from the organization's credit balance. Tracing, segmentation, training runs, and benchmark runs are currently free.
+
+## Why did I get a 402 or 429?
+
+A `402` means the organization is out of credits (or the project has no organization); a `429` is the per-key rate limit. Both are covered in [Common Issues](/troubleshooting/common-issues), with the limits and the fixes.

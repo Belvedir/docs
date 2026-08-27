@@ -10,7 +10,7 @@ Running an agent you didn't write, like [OpenClaw](https://docs.openclaw.ai) or 
 - **Auth**: your `bv_live_...` key in an `x-api-key` header (or as a Bearer token)
 - **Wire formats**: `http/protobuf` and `http/json`, gzip accepted
 - **Content**: spans that follow the OpenTelemetry GenAI conventions (`gen_ai.input.messages` / `gen_ai.output.messages`) show up as full conversations
-- **Sessions**: read from a `session.id` or `gen_ai.conversation.id` span attribute. Send the header `x-belvedir-session-from: trace` to treat every trace as its own session when the exporter doesn't stamp one
+- **Sessions**: read from a `session.id` or `gen_ai.conversation.id` span attribute. Send the header `x-belvedir-session-from: trace` to treat every trace **that contains an LLM call** as its own session when the exporter doesn't stamp one (housekeeping traces without an LLM span are deliberately not promoted)
 
 Only traces are ingested. There are no metrics or logs endpoints, so turn those signals off or point them elsewhere.
 
@@ -39,10 +39,11 @@ In `~/.openclaw/openclaw.json`, then restart the Gateway (`openclaw gateway rest
 }
 ```
 
-`hooks.allowConversationAccess` is OpenClaw's consent gate for message content: without it the plugin still runs but only structure and timing arrive, and nothing can be segmented into tasks. Set `BELVEDIR_PRIVACY_MODE=true` (or `config.privacyMode`) to send usage and structure only. To confirm the wiring without spending model tokens, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session and prints the session id to look for on the Data pages:
+`hooks.allowConversationAccess` is OpenClaw's consent gate for message content: without it the plugin still runs but only structure and timing arrive, and nothing can be segmented into tasks. Set `BELVEDIR_PRIVACY_MODE=true` (or `config.privacyMode`) to send usage and structure only. To confirm the wiring without spending model tokens, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session and prints the session id to look for on the Data pages. Run it from a checkout of the plugin repo:
 
 ```bash
-BELVEDIR_API_KEY=bv_live_... node ~/.openclaw/extensions/belvedir/tests/simulate-run.js
+git clone https://github.com/Belvedir/openclaw-belvedir && cd openclaw-belvedir
+BELVEDIR_API_KEY=bv_live_... node tests/simulate-run.js
 ```
 
 ## Hermes Agent
@@ -56,7 +57,7 @@ hermes plugins enable hermes_belvedir
 export BELVEDIR_API_KEY=bv_live_...
 ```
 
-That's the whole setup. Each turn appears within seconds: the conversation the model saw, its replies, tool calls with results, and token usage per request. Full prompts and responses are captured by default; set `BELVEDIR_PRIVACY_MODE=true` to send usage and structure only. Configuration is environment-first (`BELVEDIR_API_KEY`, `BELVEDIR_ENDPOINT`, `BELVEDIR_PRIVACY_MODE`, `BELVEDIR_CAPTURE_SENDER`), with an optional `config.json` next to the installed plugin.
+That's the whole setup. Each turn appears within seconds: the conversation the model saw, its replies, tool calls with results, and token usage per request. Full prompts and responses are captured by default; set `BELVEDIR_PRIVACY_MODE=true` to send usage and structure only. Configuration is environment-first (`BELVEDIR_API_KEY`, `BELVEDIR_ENDPOINT`, `BELVEDIR_PRIVACY_MODE`, `BELVEDIR_CAPTURE_SENDER`, plus `BELVEDIR_DEBUG=true` for stderr diagnostics), with an optional `config.json` next to the installed plugin.
 
 To confirm the wiring without running the agent, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session:
 

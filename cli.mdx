@@ -19,18 +19,19 @@ belvedir projects
 The CLI runs anywhere Node 18+ does: macOS, Linux, and Windows.
 
 - **Windows** needs `@belvedir/cli` 0.3.3 or newer for browser sign-in; older versions crash while opening the browser. Update with `npm install -g @belvedir/cli`. Credentials are stored at `.config\belvedir\credentials.json` under your user profile folder (set `XDG_CONFIG_HOME` to relocate them on any OS).
-- **Headless or remote machines** (SSH, containers): if no browser opens, copy the approve URL the terminal prints into a browser on any device; the terminal keeps polling until you click **Approve**.
+- **Headless or remote machines** (SSH, containers): if no browser opens, copy the approve URL the terminal prints into a browser on any device; the terminal polls for up to 10 minutes, then the approval link expires. Re-run `belvedir login` if it timed out.
 
 ## Reading your data
 
 ```bash
+belvedir whoami                      # the signed-in account
 belvedir orgs                        # organizations, roles, balances
 belvedir projects                    # projects you can access
 belvedir keys my-agent               # your API keys in a project
-belvedir conversations my-agent -n 50
+belvedir conversations my-agent --n 50
 belvedir traces my-agent             # raw spans (name, model, status)
 belvedir tasks my-agent
-belvedir groups my-agent
+belvedir groups my-agent             # training sets
 belvedir cleaning my-agent           # the cleaning log
 belvedir models                      # fine-tuned models
 belvedir runs my-agent               # training + optimization runs
@@ -47,7 +48,7 @@ belvedir billing my-org              # the org's credit ledger
 belvedir github                      # connected GitHub accounts
 ```
 
-Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`.
+Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`, and list reads take `--n <count>` (default 20, max 200).
 
 ## Acting
 
@@ -57,7 +58,7 @@ belvedir projects rename my-agent "my agent v2"
 belvedir projects delete my-agent --yes
 belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
-belvedir train my-agent --method sft      # launch a LoRA training run
+belvedir train my-agent --method sft      # launch a LoRA training run (sft | opsd | rl)
 belvedir train my-agent --method rl --reward similarity --algorithm auto
 belvedir train cancel <run-id>
 belvedir analyze my-agent                 # queue an optimization run
@@ -65,7 +66,7 @@ belvedir review approve <analysis-id>     # opens the PR (or reject)
 belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --design loop2 --keys all
 belvedir autotrain my-agent --traces 500  # or --days 7, or --off
 belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py"
-belvedir benchmarks add my-agent swe-bench-lite --env MODEL=anthropic/claude-sonnet-4.6
+belvedir benchmarks add my-agent swe-bench-lite --env MODEL=anthropic/claude-sonnet-5
 belvedir benchmarks catalog               # the public presets and their env
 belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
 belvedir benchmarks run <harness-id> --model <trained-model-id>   # GPU eval of a fine-tune
@@ -85,6 +86,7 @@ belvedir deploy <model-id>                # Together deploy, start to endpoint
 belvedir billing payg my-org              # save the org's card (auto reload / pay as you go)
 belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --small Qwen/Qwen3.5-9B --threshold 0.5
 belvedir routing pin my-agent <group-id> qwen3:4b
+belvedir routing unpin my-agent <group-id>
 belvedir routing routers my-agent         # all routers: auto + drafts
 belvedir routing promote <router-id>      # switch which router serves traffic
 belvedir orgs create "my team"
@@ -96,7 +98,7 @@ belvedir billing redeem my-org WELCOME
 belvedir github connect                   # opens the GitHub App install page
 ```
 
-Paid actions (training and benchmark runs) charge the project's organization balance exactly like the dashboard, with the same refund rules; write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it — the flow finishes on the web.
+Training and benchmark runs are currently free (only inference bills, exactly like the dashboard); write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it — the flow finishes on the web. One deliberate gap: `belvedir keys create` doesn't exist — API keys are minted in the dashboard (Platform → API Keys), where the raw key is shown once.
 
 ## Using with coding agents
 

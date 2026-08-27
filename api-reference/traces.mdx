@@ -11,3 +11,10 @@ Receives OpenTelemetry trace data over OTLP/HTTP. This is called automatically b
 - **Optional header** `x-belvedir-session-from: trace`: spans without a session id are assigned their trace id as the session, so exporters that never stamp sessions still segment into tasks.
 
 Traces tagged with a session id (`withSession` in the SDK, or a `session.id` / `gen_ai.conversation.id` span attribute from other exporters) are grouped into sessions and segmented into tasks; untagged spans still land but can't be linked or segmented.
+
+## Limits
+
+- Request body: 5 MB max.
+- Up to 1,000 spans and 200 distinct sessions per request.
+- Rate limit: 2 requests/second sustained per key with a burst of 120; over it returns `429` with a `Retry-After` header. The SDK's batching stays well under this.
+- A `402` means the project has no organization to bill to (trace ingestion itself is not billed today). Create or join an organization for the project.

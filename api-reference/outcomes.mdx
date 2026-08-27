@@ -7,7 +7,7 @@ description: "Tell Belvedir whether a session actually worked, from a signal onl
 Reports whether a session actually worked, from a signal only your app has: the order shipped, the test passed. Same API-key auth as ingest. The SDK wraps this as `reportOutcome(sessionId, outcome)` (Python: `report_outcome`).
 
 - **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
-- **Body**: `{ "session_id": "...", "outcome": "success" | "fail" }`
+- **Body**: `{ "session_id": "...", "outcome": "success" | "fail" }` (16 KB max)
 
 Reported ground truth beats the segmenter's judgment, asymmetrically: a `fail` overrides the session's tasks to fail, so bad sessions drop out of training data and environments everywhere task outcomes are read, while a `success` is stored on the session only (it never promotes tasks the segmenter judged failed).
 

@@ -1,7 +1,7 @@
 ---
-title: "Hosted Inference"
+title: "Cloud Inference"
 description: "Trace agents calling hosted OpenAI-compatible endpoints like Together, Fireworks, Groq, and OpenRouter."
-sidebarTitle: "Hosted Inference"
+sidebarTitle: "Cloud Inference"
 ---
 
 Open models too big for your hardware run the same way from a hosted OpenAI-compatible endpoint; the integration is identical to [local models](/inference/local-models), just with a different base URL and a real API key.
@@ -40,10 +40,12 @@ If your project uses [model routing](/api-reference/route), register the deploym
 
 ## Testing a fine-tuned model without a provider
 
-Models fine-tuned on Belvedir need no provider account while you test: every playground session on the Models page is itself an OpenAI-compatible server. Start a session ("Run inference" on the model's row), open **Use as an API endpoint** next to the chat, and copy the snippet: a base URL, a session key, and the model name `adapter`. Point any OpenAI SDK or curl at it from your own code. The endpoint lives for the session's 30 minutes and the key stops working when the session ends.
+Models fine-tuned on Belvedir need no provider account while you test: every playground session on the Models page is itself an OpenAI-compatible server. Start a session ("Run inference" on the model's row), open **Use as an API endpoint** next to the chat, and copy the snippet: a base URL, a session key, and the model name `adapter`. Point any OpenAI SDK or curl at it from your own code. The endpoint lives for the session's 60 minutes and the key stops working when the session ends.
 
 Two things to keep in the request (the snippet includes both): the model name must be `adapter` (the base model name would skip your LoRA), and `chat_template_kwargs: {"enable_thinking": false}` (thinking bases like Qwen3 otherwise spend the token budget on reasoning).
 
 ## Deploying a fine-tuned model
 
-Models trained on Belvedir are standard PEFT LoRA adapters. Click **Deploy** on the model's row (Models page) and paste a Together API key: the platform merges the adapter into the base weights and uploads the merged model to a managed, scale-to-zero endpoint in your Together account (Together doesn't accept raw LoRA adapters on dedicated endpoints, so the deploy ships a full merged copy; usually about 10 minutes). The key is used for the deploy and never stored. Then point your agent at that endpoint exactly as above. Prefer somewhere else? The panel also has prefilled steps for Fireworks and self-hosted vLLM, and the adapter downloads as a plain PEFT zip that loads anywhere. Belvedir is never in the request path.
+Models trained on Belvedir are standard PEFT LoRA adapters. Click **Deploy** on the model's row (Models page) and paste a Together API key: the platform merges the adapter into the base weights and uploads the merged model to a managed, scale-to-zero endpoint in your Together account (Together doesn't accept raw LoRA adapters on dedicated endpoints, so the deploy ships a full merged copy; expect roughly 10 to 40 minutes depending on the base size). The key is used for the deploy and never stored. Then point your agent at that endpoint exactly as above.
+
+Two preconditions, each refused with a clear message: the model needs a recoverable training checkpoint to merge from (models trained on the managed Tinker backend have one), and the base model must be on Together's supported dedicated-endpoint list. A model that can't deploy this way still serves in the playground session above and self-hosts on vLLM. Prefer somewhere else? The panel also has prefilled steps for Fireworks and self-hosted vLLM, and the adapter downloads as a plain PEFT zip that loads anywhere. Belvedir is never in the request path.

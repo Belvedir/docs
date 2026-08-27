@@ -4,7 +4,7 @@ sidebarTitle: "Introduction"
 description: "Instrument your LLM agents, collect traces, and improve them automatically with Belvedir."
 ---
 
-Belvedir is an observability and auto-improvement platform for LLM agents. Install the SDK, wrap your agent runs in sessions, and Belvedir segments the traces into tasks, groups similar work together, and runs improvement loops (harness evolution, prompt evolution, and LoRA fine-tuning) against your production traffic.
+Belvedir is an observability and auto-improvement platform for LLM agents. Install the SDK, wrap your agent runs in sessions, and Belvedir segments the traces into tasks, gathers similar tasks into training sets, and runs improvement loops (harness evolution, prompt evolution, and LoRA fine-tuning) against your production traffic.
 
 ## Where to start
 
@@ -16,7 +16,7 @@ Belvedir is an observability and auto-improvement platform for LLM agents. Insta
     Same concepts, context managers instead of callbacks.
   </Card>
   <Card title="How it works" href="/how-it-works">
-    The six-stage pipeline: instrument, collect, segment, group, clean, optimize.
+    The six-stage pipeline: instrument, collect, segment, gather, clean, optimize.
   </Card>
   <Card title="Agents without the SDK" href="/guides/otel-agents">
     Point any OpenTelemetry exporter at Belvedir: OpenClaw, Hermes, or your own.
@@ -27,7 +27,7 @@ Belvedir is an observability and auto-improvement platform for LLM agents. Insta
 
 <CardGroup cols={2}>
   <Card title="Trace" href="/sdk/supported-providers">
-    Every LLM and tool call from OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more. Sessions segment into tasks; similar tasks gather into groups.
+    Every LLM and tool call from OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more. Sessions segment into tasks; similar tasks gather into training sets.
   </Card>
   <Card title="Route" href="/inference/mixture-of-models">
     Send each call to the model that fits it, decided from your own task groups, and let the record of what worked pick the cheapest model that wins.
@@ -36,14 +36,14 @@ Belvedir is an observability and auto-improvement platform for LLM agents. Insta
     Harness evolution and prompt evolution loops that feed on production traces and open PRs against your repo, plus LoRA finetuning on your successful traffic.
   </Card>
   <Card title="Benchmark" href="/benchmarks/overview">
-    Run any agent harness in an isolated CPU or GPU sandbox against SWE-bench, τ-bench, GAIA, and more, or environments generated from your own groups.
+    Run any agent harness in an isolated CPU or GPU sandbox against SWE-bench, τ-bench, GAIA, and more, or environments generated from your own training sets.
   </Card>
 </CardGroup>
 
 ## Supported runtimes
 
-The Node and Python SDKs (both `belvedir` — npm and PyPI) both auto-instrument the major LLM providers. (The legacy `@fractalresearch/loop` and `fractal-loop` packages still work but are deprecated.) Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), [vLLM](https://docs.vllm.ai)) work out of the box. See [Hosted Inference](/inference/hosted).
+The Node and Python SDKs (both `belvedir` — npm and PyPI) both auto-instrument the major LLM providers. (The legacy `@fractalresearch/loop` and `fractal-loop` packages still work but are deprecated.) Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), [vLLM](https://docs.vllm.ai)) work out of the box. See [Cloud Inference](/inference/hosted).
 
 <Tip>
-Working with a coding agent? The whole integration guide lives at [platform.belvedir.ai/agents.md](https://platform.belvedir.ai/agents.md) in agent-readable markdown: both SDKs, outcome reporting, and the common pitfalls. It's also published as a skill at [github.com/Belvedir/skills](https://github.com/Belvedir/skills). The dashboard's Get Started page has a **Copy prompt** button that puts a ready-made instruction on your clipboard. Paste it into your coding agent and it downloads the skill into your codebase (as `.claude/skills/belvedir/SKILL.md`) and instruments the app for you.
+Working with a coding agent? The whole integration guide lives at [platform.belvedir.ai/agents.md](https://platform.belvedir.ai/agents.md) in agent-readable markdown: both SDKs, outcome reporting, and the common pitfalls. It's also published as a skill at [github.com/Belvedir/skills](https://github.com/Belvedir/skills). The dashboard's Quick Start page has a **Copy prompt for AI** button that puts a ready-made instruction on your clipboard. Paste it into your coding agent and it downloads the skill into your codebase (as `.claude/skills/belvedir/SKILL.md`) and instruments the app for you.
 </Tip>

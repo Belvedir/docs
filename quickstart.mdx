@@ -32,7 +32,7 @@ export async function register() {
     const openai = await import("openai");
     const anthropic = await import("@anthropic-ai/sdk");
     initialize({
-      apiKey: process.env.BELVEDIR_API_KEY,
+      apiKey: process.env.BELVEDIR_API_KEY!,
       appName: "my-ai-app",
       instrumentModules: { openAI: openai.OpenAI, anthropic },
     });
@@ -42,9 +42,9 @@ export async function register() {
 
 Do **not** call `initialize()` from inside a route file. By then the LLM SDK is already imported and the patch won't take. In Next.js, always pass `instrumentModules` (only the SDKs you actually use): bundlers can load LLM SDKs in ways auto-instrumentation can't see, which silently drops all LLM spans.
 
-## 4. Group agent work into sessions
+## 4. Wrap agent work in sessions
 
-This is what powers Tasks & Groups. Wrap each agent run in `withSession` so every LLM and tool call is linked under one session id. Belvedir then segments that session into the individual tasks the agent performed. Optionally wrap distinct units of work in `task()` for sharper task boundaries:
+This is what powers tasks and training sets. Wrap each agent run in `withSession` so every LLM and tool call is linked under one session id. Belvedir then segments that session into the individual tasks the agent performed. Optionally wrap distinct units of work in `task()` for sharper task boundaries:
 
 ```ts
 import loop from "belvedir";
@@ -64,6 +64,16 @@ await loop.withSession(
 
 Without `withSession` you still get raw traces, but they can't be linked into sessions or segmented into tasks.
 
+On serverless (Vercel, Lambda, Cloud Functions), also `await flush()` before each handler returns. The function can freeze or exit before the batching span processor exports, and the spans are silently lost:
+
+```ts
+import { flush } from "belvedir";
+
+// ... LLM calls ...
+await flush();
+return Response.json(result);
+```
+
 ## 5. Use your Belvedir API key for inference
 
 Belvedir can also execute your LLM calls: point your OpenAI-compatible client at the router endpoint and use your Belvedir key in place of the provider key. Two lines change; the client works exactly as before.
@@ -80,14 +90,14 @@ const res = await client.chat.completions.create({
 });
 ```
 
-Do this for every LLM client in your app: keep the model each call already names, change only the base URL and key. Each model stays its own baseline: Grok call sites become Belvedir calls with `x-ai/grok-4.6`, Claude Sonnet call sites become Belvedir calls with `anthropic/claude-sonnet-5`. If a call site used a provider-native SDK (xAI, Google), swap it for the OpenAI client pointed at Belvedir and write the model in the provider-prefixed spelling (`grok-4.6` → `x-ai/grok-4.6`); OpenAI ids stay bare. Bare ids are normalized server-side too, so a missed one still routes. **Anthropic SDK call sites don't swap**: point the Anthropic client at `baseURL: "https://platform.belvedir.ai/api"` instead and requests pass through to the Messages API untranslated — prompt caching, thinking, beta headers, and native streaming intact (see [the Messages passthrough](/api-reference/route#post-apiv1messages-anthropic-native-passthrough)); that surface is model-pinned, so routing stays with the OpenAI-shaped endpoint. The first call naming a model creates a [router](/api-reference/route) anchored on it (Routing page, "From your code"): that model is the ceiling and answers every conversational call, while cheaper tiers serve the easier machine-shaped tasks underneath, so people always talk to the model your code named and you pay less when a smaller model is enough for the busywork. Belvedir runs the call and bills your organization per token at the rates on the platform's Pricing page (Inference → Pricing). Every project also has an auto router; `model: "auto"` hands a call to it outright. The response's `model` tells you what actually ran.
+Do this for every LLM client in your app: keep the model each call already names, change only the base URL and key. Each model stays its own baseline: Grok call sites become Belvedir calls with `x-ai/grok-4.6`, Claude Sonnet call sites become Belvedir calls with `anthropic/claude-sonnet-5`. If a call site used a provider-native SDK (xAI, Google), swap it for the OpenAI client pointed at Belvedir and write the model in the provider-prefixed spelling (`grok-4.6` → `x-ai/grok-4.6`); OpenAI ids stay bare. Bare ids are normalized server-side too, so a missed one still routes. **Anthropic SDK call sites don't swap**: point the Anthropic client at `baseURL: "https://platform.belvedir.ai/api"` instead and requests pass through to the Messages API untranslated — prompt caching, thinking, beta headers, and native streaming intact (see [the Messages passthrough](/api-reference/route#post-apiv1messages-anthropic-native-passthrough)); that surface is model-pinned, so routing stays with the OpenAI-shaped endpoint. The first call naming a model creates a [router](/api-reference/route) anchored on it (Routers page, "From your code"): that model is the ceiling and answers every conversational call, while cheaper tiers serve the easier machine-shaped tasks underneath, so people always talk to the model your code named and you pay less when a smaller model is enough for the busywork. (The tiering is the project's **Smart routing** permission, on by default; turned off, every call serves exactly the model it names.) Belvedir runs the call and bills your organization per token at the rates on the platform's Pricing page (Inference → Pricing). Every project also has an auto router; `model: "auto"` hands a call to it outright. The response's `model` tells you what actually ran.
 
-## 6. View your tasks & groups
+## 6. View your tasks and training sets
 
-Traces appear in the dashboard within seconds. About 30s after a session goes quiet, it's segmented. Open the **Tasks** tab to see each task, and **Groups** to see tasks of the same type gathered together.
+Traces appear in the dashboard within seconds. About 30s after a session goes quiet, it's segmented. Open the **Tasks** tab to see each task, and **Training Sets** to see tasks of the same type gathered together.
 
 <Tip>
-Working with a coding agent? This whole guide lives at [platform.belvedir.ai/agents.md](https://platform.belvedir.ai/agents.md) in agent-readable markdown, and is published as a skill at [github.com/Belvedir/skills](https://github.com/Belvedir/skills). The dashboard's Get Started page has a **Copy prompt** button that puts a ready-made instruction on your clipboard. Paste it into your coding agent and it downloads the skill into your codebase (as `.claude/skills/belvedir/SKILL.md`) and instruments the app for you.
+Working with a coding agent? This whole guide lives at [platform.belvedir.ai/agents.md](https://platform.belvedir.ai/agents.md) in agent-readable markdown, and is published as a skill at [github.com/Belvedir/skills](https://github.com/Belvedir/skills). The dashboard's Quick Start page has a **Copy prompt for AI** button that puts a ready-made instruction on your clipboard. Paste it into your coding agent and it downloads the skill into your codebase (as `.claude/skills/belvedir/SKILL.md`) and instruments the app for you.
 </Tip>
 
 ## Next steps

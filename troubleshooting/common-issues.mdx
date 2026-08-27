@@ -8,13 +8,17 @@ description: "Resolve the most common reasons LLM traces aren't appearing in you
 
 Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `platform.belvedir.ai` (also served on `belvedir.ai`). Pointing `baseUrl` at any other host returns a 404 and the spans are dropped silently: the SDK keeps running and your app shows no error, but nothing is ever stored. Safest is to omit `baseUrl` entirely, since it defaults to `https://platform.belvedir.ai`.
 
+## Ingest or the router returns 402 or 429
+
+Neither is a code bug. A `402` from the router means the organization's credit balance is used up: buy credits on **Organization Settings → Billing**, or turn on **Auto refill** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (run past zero, charged hourly) is enabled per organization on request via **Speak to sales** on the Billing page. A `402` from trace ingest means the project has no organization to bill to — trace ingestion itself is not billed today. A `429` is the per-key rate limit: ingest allows 2 requests/second sustained with a burst of 120, the router 25 requests/second with a burst of 300 (adjustable per organization); back off for the `Retry-After` seconds and retry.
+
 ## `initialize() failed` warning mentioning `parseKeyPairsIntoRecord` (Node)
 
 A dependency conflict in `belvedir@0.3.1`: two incompatible OpenTelemetry generations could end up in one install, and `initialize()` failed with `Cannot read properties of undefined (reading 'parseKeyPairsIntoRecord')`. Initialization failures never crash your app, so the only symptom is that console warning and zero spans. Fixed in 0.3.2: run `npm install belvedir@latest` (delete `package-lock.json`'s pinned 0.3.1 entry or run `npm update belvedir` if the lockfile keeps the old version).
 
 ## Traces silently missing after July 2026
 
-SDK versions before `@fractalresearch/loop@0.1.5` / `fractal-loop 0.1.1` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `@belvedir/loop` / `belvedir-loop`, or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`.
+SDK versions before `@fractalresearch/loop@0.1.5` / `fractal-loop 0.1.1` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `belvedir` (npm or PyPI), or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`.
 
 ## No traces appearing on Vercel
 
@@ -26,7 +30,9 @@ export const runtime = 'nodejs'
 
 ## I see HTTP spans but no anthropic.chat / openai.chat span
 
-The patch didn't take. This happens when the LLM SDK was imported before `initialize()` ran. In Next.js, keep initialization in `instrumentation.ts` (not a route file) and restart `next dev`. If you see the `initialize() ran after ... was imported` warning on startup, that's the cause. In a plain Node process, call `initialize()` at the very top of your entry file, before importing OpenAI/Anthropic.
+The patch didn't take. This happens when the LLM SDK was imported before `initialize()` ran. In Next.js, keep initialization in `instrumentation.ts` (not a route file) and restart `next dev`. If you see the `initialize() ran after ... was imported` warning on startup, that's the cause. In a plain CommonJS Node process, call `initialize()` at the very top of your entry file, before importing OpenAI/Anthropic.
+
+In an ESM entry point (`.mjs`, or `"type": "module"` in `package.json`) the same failure happens **with no warning at all**: static imports hoist above the `initialize()` call and dynamic `import()` bypasses the require hook, so auto-instrumentation never sees the LLM SDK. In ESM, always pass the SDKs via `instrumentModules`.
 
 In Next.js there's a second cause: the bundler inlines the LLM SDK into the route, or loads it as an ES module; either way the `require()` hook auto-instrumentation relies on never fires, even with `serverExternalPackages` set. The reliable fix is to pass your LLM SDKs to `initialize()` via `instrumentModules` so they are patched directly, no matter how they were loaded:
 
@@ -35,12 +41,12 @@ In Next.js there's a second cause: the bundler inlines the LLM SDK into the rout
 const openai = await import("openai");
 const anthropic = await import("@anthropic-ai/sdk");
 initialize({
-  apiKey: process.env.BELVEDIR_API_KEY,
+  apiKey: process.env.BELVEDIR_API_KEY!,
   instrumentModules: { openAI: openai.OpenAI, anthropic },
 });
 ```
 
-Requires `belvedir` (or its alias `@belvedir/loop`, any version, or the deprecated `@fractalresearch/loop@0.1.3` or later). **Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
+Requires `belvedir` (the frozen legacy `@belvedir/loop@0.2.0` and `@fractalresearch/loop@0.1.3+` also support `instrumentModules`, but they predate several later fixes; migrate to `belvedir`). **Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
 
 ## Conversations captured, but the last assistant reply is missing
 
@@ -48,9 +54,17 @@ Streamed responses used to be the culprit: when an app called an OpenAI-compatib
 
 Fixed in `belvedir@0.4.0` (Node) and `belvedir==0.6.0` (Python): `initialize()` also instruments raw HTTP — `globalThis.fetch` in Node, `requests`/`httpx` in Python — for `POST .../chat/completions` calls, accumulating streamed deltas in the background and recording the full assistant message, tool calls, and usage when the stream ends. Update with `npm install belvedir@latest` / `pip install -U belvedir`. If you're pinned below those versions, route the call through the `openai` client (patched via `instrumentModules` in Node) instead of raw HTTP.
 
-## Traces show up but no tasks or groups
+## Spans appear locally but not in production
 
-Tasks and groups only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
+Serverless functions (Vercel, Lambda, Cloud Functions) can freeze or exit as soon as the response is sent, before the batching span processor exports. `await flush()` (Python: `loop.flush()`) at the end of every handler that makes LLM calls, before returning.
+
+## Traces show up but no tasks or training sets
+
+Tasks and training sets only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
+
+## `reportOutcome` returns false (or `POST /api/v1/outcomes` returns 404)
+
+The session hasn't been ingested yet: outcomes can only attach to sessions the platform has seen. Call `flush()` first so the spans arrive, then retry, or report later from a webhook or job.
 
 ## Traces missing in development
 

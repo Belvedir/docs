@@ -13,7 +13,7 @@ Observability is the first half of Belvedir; the second half is closing the loop
   your agent in production                              │
              │  every LLM + tool call (loop SDK)        │
              ▼                                          │
-  traces ──► sessions ──► tasks ──► groups              │
+  traces ──► sessions ──► tasks ──► training sets       │
                             │                           │
              what went wrong│what went right            │
              ┌──────────────┴──────────────┐            │
@@ -37,9 +37,9 @@ Each loop evolves a different layer of your agent against its own production tra
 
 - **Prompt evolution**: a recursive self-improvement loop over what your agent is told and remembers (system prompts, skills, instructions, memory files), never its application logic. Production sessions show what it misses and should have remembered; the loop distills that back into the scaffolding.
 - **Harness evolution**: the same loop with the whole harness on the table: prompts, tools, and code all improve together, opening a PR with the winner.
-- **LoRA finetuning**: train lightweight LoRA adapters on your traces instead of touching the full weights: cheap to run, quick to iterate, and swappable per task type, on top of any open base model. See [Model Training](/training/overview).
+- **LoRA finetuning**: train lightweight LoRA adapters on your traces instead of touching the full weights: cheap to run, quick to iterate, and swappable per task type, on top of the supported open base models. See [Model Training](/training/overview).
 
-Loops are configured per project from the Training section (Training → Loops → Make a loop), and a project can run several at once.
+Loops are configured per project from the Training section (Training → Loops → Make a loop), and a project can run several at once. Harness evolution, Prompt evolution, and LoRA finetuning are the loop types; each loop you make takes a name of your own in the wizard.
 
 ## Harness evolution & prompt evolution: two designs
 

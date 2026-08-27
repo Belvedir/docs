@@ -14,7 +14,7 @@ pip install belvedir
 
 ## 2. Initialize at process startup
 
-Call `initialize()` once, before your agent starts making LLM calls. Unlike Next.js there is no bundler in the way, so no `instrumentModules` equivalent is needed:
+Call `initialize()` once, before your agent starts making LLM calls. Unlike Next.js there is no bundler in the way, so no `instrumentModules` equivalent is needed. A second `initialize()` call logs a warning and is ignored:
 
 ```python
 import os
@@ -26,9 +26,11 @@ loop.initialize(
 )
 ```
 
-## 3. Group agent work into sessions
+On `belvedir>=0.6.0`, raw `requests` / `httpx` calls to OpenAI-compatible endpoints (`POST .../chat/completions`) are captured automatically too, streamed responses included, so agent frameworks with their own HTTP layer are traced without a client SDK. Don't rewrite raw HTTP calls to a client SDK just for tracing; pass `instrument_http=False` to `initialize()` to opt out.
 
-Same as the Node SDK: `session` links every span under one session id (required for Tasks & Groups), and `task()` optionally marks task boundaries. Both are context managers and work inside `async def` bodies:
+## 3. Wrap agent work in sessions
+
+Same as the Node SDK: `session` links every span under one session id (required for tasks and training sets), and `task()` optionally marks task boundaries. Both are context managers, they work inside `async def` bodies, and `session` also accepts a `metadata` dict. `with_session` is an alias of `session`:
 
 ```python
 with loop.session(session_id=chat_id, user_id=user.id):
@@ -39,3 +41,14 @@ with loop.session(session_id=chat_id, user_id=user.id):
 ## 4. Flush before short-lived processes exit
 
 Spans export in batches; scripts and serverless handlers can exit before the batch ships. Call `loop.flush()` before returning, or pass `disable_batch=True` to `initialize()` for local testing.
+
+## 5. Report outcomes
+
+When your app knows whether a session actually worked, report it. Reported outcomes beat Belvedir's model-judged labels: a `"fail"` keeps every task in that session out of training data.
+
+```python
+loop.flush()  # the session must have arrived first
+loop.report_outcome(chat_id, "success" if order_shipped else "fail")
+```
+
+`flush()` and `report_outcome()` never raise; failures log warnings under the `belvedir.loop` logger. `report_outcome` returns `False` if Belvedir hasn't ingested the session yet (flush first, then retry) or if the outcome is anything other than `"success"` or `"fail"`.

@@ -18,20 +18,20 @@ Both SDKs run on macOS, Linux, and Windows with no native dependencies: the Node
 
 ## Initialize
 
-The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root; see the [Next.js guide](/guides/nextjs). In a plain Node process, call it at the top of your entry file:
+The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root; see the [Next.js guide](/guides/nextjs). In a plain CommonJS Node process, call it at the top of your entry file:
 
 ```ts
 import { initialize } from "belvedir";
 
 initialize({
-  apiKey: process.env.BELVEDIR_API_KEY,
+  apiKey: process.env.BELVEDIR_API_KEY!,
   appName: "my-agent",
 });
 
 // import OpenAI/Anthropic *after* initialize()
 ```
 
-For bundled or ESM environments, pass your LLM SDKs to `instrumentModules` so they're patched directly; see [Configuration](/sdk/configuration).
+In an ESM entry point (`.mjs`, or `"type": "module"` in `package.json`), **always pass your LLM SDKs via `instrumentModules`**: static imports hoist above the `initialize()` call and dynamic `import()` bypasses the require hook, so auto-instrumentation produces no LLM spans there, with no warning. The same applies to bundled environments. See [Configuration](/sdk/configuration).
 
 ## Next steps
 

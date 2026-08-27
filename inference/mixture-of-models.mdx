@@ -28,7 +28,7 @@ const res = await client.chat.completions.create({ model, messages });
 
 ## Let Belvedir decide
 
-You can write `needsDeepReasoning` yourself, or let Belvedir decide. Configure routing under the **Routing** page (a default model, an optional strong model for hard requests, and per-task-group overrides), then ask `POST /api/v1/route` before each call, authenticated with the same API key as ingest. A project can hold several routers, but exactly one is the **production** router: that is the config this endpoint serves. The others are drafts; stage a new setup there and click "Make production" to switch, instantly and reversibly. The decision is deterministic and fast: no model call, just your config plus a lexical match against your project's task groups and a complexity score on the request:
+You can write `needsDeepReasoning` yourself, or let Belvedir decide. Configure routing under the **Routers** page (a Big model for hard requests, a Medium default, an optional Small model for quick machine tasks, and per-task-group overrides), then ask `POST /api/v1/route` before each call, authenticated with the same API key as ingest. A project can hold several routers. Exactly one is the **auto** router: it serves calls that say `model: "auto"` (or name no model), and it is the config this decision endpoint serves by default. The others are drafts; stage a new setup there and click **Make auto** to switch, instantly and reversibly. Alongside the auto router, the first inference call that names a real model creates a router **anchored** on that model (listed as "From your code"), and passing that `model` on this endpoint decides through it. The decision is fast and replayable: no LLM sits in the decision path, just your config plus one cached embedding lookup against your project's task groups (a lexical matcher takes over if the embedding isn't available) and a complexity score on the request:
 
 ```ts
 const res = await fetch("https://platform.belvedir.ai/api/v1/route", {
@@ -44,19 +44,20 @@ const res = await fetch("https://platform.belvedir.ai/api/v1/route", {
 });
 const route = await res.json();
 // { configured: true, model: "qwen3:4b",
-//   tier: "default" | "strong" | "group" | "pinned",
-//   matched_group: { id, label } | null, complexity: 0.35, reason: "..." }
+//   tier: "small" | "default" | "strong" | "group" | "group-record" | "pinned" | "fixed",
+//   matched_group: { id, label } | null, complexity: 0.35, reason: "...",
+//   router_id: "...", anchor_model: null }
 
 const model = route.configured ? route.model : "qwen3:4b"; // local fallback
 const res2 = await client.chat.completions.create({ model, messages });
 ```
 
-Every new project starts with a Default router (GLM 5.2 serves, clearly hard requests escalate to Claude Fable 5). Unconfigured projects (older ones, or those whose routers were deleted) get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
+Every new project starts with a Default router: GLM 5.2 serves the bulk (Medium), clearly hard requests escalate to Claude Fable 5 (Big), and quick machine tasks take Qwen 3.5 9B (Small). A project created with **Chinese models** off gets a variant with Grok 4.6 as Medium and Llama 3.2 3B as Small instead. Unconfigured projects (older ones, or those whose routers were deleted) get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
 
 ## Tune it from production data
 
-Every span still records the model that served it, so Belvedir builds a per-group record of how each model actually performs on that kind of work. The Routing page shows each group's observed success rates per model, that model's newest score in the group's generated environment when one exists, and a one-click **auto-pick** recommendation: the cheapest model whose observed success rate is within a few points of the best. Apply it and save — the loop's fine-tuned specialists earn traffic the same way, by winning on the record.
+Every span still records the model that served it, so Belvedir builds a per-group record of how each model actually performs on that kind of work. The Routers page shows each group's observed success rates per model, that model's newest score in the group's generated environment when one exists, and a one-click **auto-pick** recommendation: the cheapest model whose success rate, judged at a 95%-confidence lower bound over at least 10 recent judged tasks, is within 5 points of the best. Apply it and save — the loop's fine-tuned specialists earn traffic the same way, by winning on the record.
 
 Routing itself is a permission: **Smart routing** (Project Permissions, on by default) is whether the router may pick the serving model at all. Off means every request is served by exactly the model it names, and `auto` serves the router's Default model, deterministically.
 
-With **Automatic updates** on (Project Permissions, the default), the record decides by itself: recognized task groups you haven't assigned a model to serve machine-shaped requests with the auto-pick winner live, as tier `group-record`, and requests with a strict JSON output contract can be served by the Small tier first with mechanical validation and automatic escalation. Turn it off and the record only recommends: the router editor lists each pending recommendation with its observed success rate, and an **Approve** button puts that one assignment into production. Details on the [router endpoint page](/api-reference/route).
+With **Automatic updates** on (Project Permissions, the default), the record decides by itself: task groups you haven't assigned a model to serve machine-shaped requests with the auto-pick winner live, as tier `group-record` (a group is recognized by embedding similarity, and record picks only start once the project's matcher has proven itself on that project's own tasks), and non-streaming requests with a strict JSON output contract can be served by the Small tier first with mechanical validation and automatic escalation (a per-group guardrail stops the cascade anywhere Small keeps losing). Turn it off and the record only recommends: the router editor lists each pending recommendation with its observed success rate, and an **Approve** button puts that one assignment into effect. Details on the [router endpoint page](/api-reference/route).

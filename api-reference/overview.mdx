@@ -8,4 +8,7 @@ The Belvedir REST API accepts OpenTelemetry trace data in OTLP JSON format. The 
 
 - **Base URL**: `https://platform.belvedir.ai`
 - **Authentication**: API key via `Authorization: Bearer` or `x-api-key` header. See [Authentication](/api-reference/authentication).
-- **Endpoints**: [`POST /api/v1/traces`](/api-reference/traces), [`POST /api/v1/outcomes`](/api-reference/outcomes), [`POST /api/v1/route`](/api-reference/route).
+- **Endpoints**:
+  - Tracing: [`POST /api/v1/traces`](/api-reference/traces), [`POST /api/v1/outcomes`](/api-reference/outcomes)
+  - Inference: [`POST /api/v1/route/chat/completions`](/api-reference/route) (OpenAI-compatible), [`POST /api/v1/messages`](/api-reference/route) (Anthropic-native passthrough), [`POST /api/v1/route/embeddings`](/api-reference/route), and [`POST /api/v1/route`](/api-reference/route) for a routing decision without execution
+  - Batches: [`/api/v1/route/batches`](/api-reference/route) (create, status, results, cancel, uploads) and the Anthropic-SDK-compatible facade at `/api/v1/messages/batches`

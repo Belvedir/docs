@@ -10,17 +10,17 @@ Python takes the same options, snake\_cased (`api_key`, `base_url`, `app_name`, 
 | --- | --- |
 | `apiKey` | Required. Your Belvedir API key. |
 | `baseUrl` | Belvedir platform URL. Defaults to `https://platform.belvedir.ai` |
-| `appName` | Your application name. Used to label traces. |
+| `appName` | Your application name. Used to label traces. Defaults to `belvedir-loop-app`. |
 | `disableBatch` | Send spans immediately instead of batching. Useful for testing. |
 | `instrumentModules` | Your imported LLM SDKs, e.g. `{ openAI: openai.OpenAI, anthropic }`. Patches the modules directly instead of relying on require hooks; required in Next.js and other bundled or ESM environments. |
-| `instrumentFetch` | Node, 0.4.0+. Capture LLM calls made with raw `fetch` to OpenAI-compatible endpoints (`POST .../chat/completions`), including streamed responses: deltas are accumulated in the background and the final assistant message, tool calls, and usage land on the span when the stream ends. Defaults to `true`; set `false` to opt out. Other requests pass through untouched. |
+| `instrumentFetch` | Node, 0.4.0+ (Python: `instrument_http`, 0.6.0+). Capture LLM calls made with raw `fetch` to OpenAI-compatible endpoints (`POST .../chat/completions`), including streamed responses: deltas are accumulated in the background and the final assistant message, tool calls, and usage land on the span when the stream ends. Defaults to `true`; set `false` to opt out. Requests made through the official `openai` / `@anthropic-ai/sdk` clients are deliberately skipped here (the client-level instrumentation already captures them, so nothing is double-counted), and other requests pass through untouched. Very long content is truncated on the span (completions at 200,000 characters, each prompt message at 100,000). |
 
 ## SDK API
 
 | Function | Description |
 | --- | --- |
 | `initialize(config)` | Patches your LLM clients and starts exporting spans. Call once in `instrumentation.ts`. |
-| `withSession(info, fn)` | Runs `fn` inside a session so every span it produces is linked under the session. `info` is a session id string, or `{ sessionId, userId?, metadata? }` (0.3.1 — both forms work). Required for Tasks & Groups. |
+| `withSession(info, fn)` | Runs `fn` inside a session so every span it produces is linked under the session. `info` is a session id string, or `{ sessionId, userId?, metadata? }` (0.3.1 — both forms work). Required for tasks and training sets. |
 | `task(name, fn)` | Optional boundary hint. Wraps a unit of work in a named span so segmentation knows where one task starts and ends. |
 | `flush()` | Forces pending spans to export. Await it before a serverless route returns. |
-| `reportOutcome(sessionId, outcome)` | Ground truth: tell Belvedir whether the session actually worked (`"success"` or `"fail"`) from a signal only your app has: the order shipped, the test passed. Reported outcomes beat the model-judged labels: a fail keeps that session's tasks out of training data. Call after `flush()`, or later from a webhook or job. Python: `report_outcome(session_id, outcome)`. |
+| `reportOutcome(sessionId, outcome)` | Ground truth: tell Belvedir whether the session actually worked (`"success"` or `"fail"`) from a signal only your app has: the order shipped, the test passed. Reported outcomes beat the model-judged labels: a fail keeps that session's tasks out of training data. Call after `flush()`, or later from a webhook or job. It never throws; it returns `false` (with a logged warning) if Belvedir hasn't ingested the session yet, so flush first and retry. Import it by name: `import { reportOutcome } from "belvedir"` (it is not on the default export). Python: `report_outcome(session_id, outcome)`, which also returns `False` for any outcome string other than `"success"` or `"fail"`. |

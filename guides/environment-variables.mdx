@@ -11,6 +11,10 @@ The SDK itself only reads what you pass to `initialize()`. In practice most apps
 | `BELVEDIR_API_KEY` | `apiKey` | Required. Starts with `bv_live_` (legacy `fr_live_` keys remain valid). |
 | `BELVEDIR_BASE_URL` | `baseUrl` | Optional. Defaults to `https://platform.belvedir.ai`. |
 
+## Plugin variables (read directly)
+
+The [OpenClaw and Hermes plugins](/guides/otel-agents) are configured environment-first and, unlike the SDK, read these variables themselves: `BELVEDIR_API_KEY`, `BELVEDIR_ENDPOINT`, `BELVEDIR_PRIVACY_MODE`, `BELVEDIR_CAPTURE_SENDER`, and `BELVEDIR_DEBUG` (stderr diagnostics when traces don't arrive). Mind the URL shape: `BELVEDIR_ENDPOINT` is the **full ingest URL** (`https://platform.belvedir.ai/api/v1/traces`), not a base URL like the SDK's `BELVEDIR_BASE_URL`.
+
 ## Benchmark harness variables
 
 If your code runs inside a Belvedir [benchmark](/benchmarks/overview) sandbox, extra variables are injected at run time: `BELVEDIR_API_KEY` (a per-run ingest key), `BELVEDIR_BASE_URL`, `BELVEDIR_RUN_ID`, and `BELVEDIR_TASKS_FILE` when the harness has a custom task set. The legacy `FRACTAL_*` names are also set as aliases for older drivers. The SDK does **not** read them automatically; pass them to `initialize()` and use `BELVEDIR_RUN_ID` as the `sessionId`.

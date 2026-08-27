@@ -4,7 +4,7 @@ sidebarTitle: "Importing Traces"
 description: "Bring trace history over from LangSmith, Langfuse, Phoenix, Braintrust, PostHog, Mastra, or a CSV/JSONL/JSON file."
 ---
 
-Already tracing with another observability platform? Import that history instead of waiting for fresh traffic. Imported traces go through the same pipeline as live ones, so they form sessions, tasks, and groups, and count toward training.
+Already tracing with another observability platform? Import that history instead of waiting for fresh traffic. Imported traces go through the same pipeline as live ones, so they form sessions, tasks, and training sets, and count toward training.
 
 ## 1. From the dashboard
 
@@ -17,19 +17,29 @@ Lists nothing, imports the 20 most recent conversations. Pass `--list` first to 
 ```bash
 pip install belvedir
 
-python -m belvedir.importers.langsmith \
+python -m belvedir_loop.importers.langsmith \
     --langsmith-key lsv2_pt_... \
     --project my-project \
     --belvedir-key bv_live_... \
     --limit 20
 ```
 
+A local file works from the shell too (`--list` previews here as well; `--limit` caps how many conversations import):
+
+```bash
+python -m belvedir_loop.importers.files \
+    --file conversations.jsonl \
+    --belvedir-key bv_live_...
+```
+
+CSV, JSONL, and JSON are detected automatically, the same formats the dashboard upload accepts.
+
 ## 3. Or from Python
 
 List conversations, pick, and import. Conversations are LangSmith traces grouped by their `session_id` / `conversation_id` / `thread_id` metadata (traces without any are imported individually):
 
 ```python
-from belvedir.importers.langsmith import LangSmithImporter
+from belvedir_loop.importers.langsmith import LangSmithImporter
 
 imp = LangSmithImporter(api_key="lsv2_pt_...", project="my-project")
 for conv in imp.list_conversations(limit=20):
@@ -40,6 +50,8 @@ imp.import_conversations(
     belvedir_api_key="bv_live_...",
 )
 ```
+
+`import_conversations` looks for the ids within the most recent conversations (its `limit`, default 20). If you picked ids from a deeper `list_conversations(limit=...)` call, pass the same `limit` to `import_conversations` or it raises `LangSmithImportError` for the older ones. There is a `FileImporter` in `belvedir_loop.importers.files` with the same shape for local files.
 
 ## What to expect
 

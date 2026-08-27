@@ -4,10 +4,26 @@ sidebarTitle: "Vercel"
 description: "Configure the Node.js runtime and set your environment variables on Vercel so Belvedir SDK traces are captured correctly in production."
 ---
 
-The Belvedir SDK relies on OpenTelemetry, which requires the Node.js runtime. On Vercel, routes can default to the Edge runtime where the SDK silently skips initialization. Add the following to any API route that makes LLM calls:
+The Belvedir SDK relies on OpenTelemetry, which requires the Node.js runtime. On Vercel, routes can default to the Edge runtime, where instrumentation cannot work: you'll see an `initialize() failed; the app will run untraced` error in the logs and no spans. Add the following to any API route that makes LLM calls:
 
 ```ts
 export const runtime = 'nodejs'
 ```
+
+## Flush before the function returns
+
+Vercel functions can freeze or exit as soon as the response is sent, before the batching span processor exports. Spans then appear locally but never in production. `await flush()` at the end of every handler that makes LLM calls:
+
+```ts
+import { flush } from "belvedir";
+
+// ... LLM calls ...
+await flush();
+return Response.json(result);
+```
+
+## Keep the SDKs external
+
+In Next.js, list your LLM SDKs and `belvedir` itself in `serverExternalPackages` so every bundle shares one runtime copy; a route that bundles its own copy calls `flush()` on an uninitialized duplicate and spans drop silently on serverless. See [the Next.js guide](/guides/nextjs) for the version-specific config key.
 
 Set `BELVEDIR_API_KEY` in your Vercel project's environment variables, then redeploy. See [Environment Variables](/guides/environment-variables) for the full list.
