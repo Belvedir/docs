@@ -18,7 +18,7 @@ Complete suites like SWE-bench bring their own tasks and grading. Scaffold-style
 
 ## Start from the catalog
 
-The New Harness page offers one-click presets for common suites — SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench (vLLM-served) — and for agent scaffolds: OpenClaw, Hermes Agent, OpenCode, Prime Agent, Pi, QM, and Mastra. Every prefilled field is editable before you create the harness. Scaffold drivers bring the agent but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
+The New Harness page offers one-click presets, starting with the first-party **Belvedir Runner** — a minimal agent loop with a pinned independent LLM judge, and the default driver for [generated environments](/benchmarks/environments) — alongside common suites (SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench, vLLM-served) and agent scaffolds: OpenClaw, Hermes Agent, OpenCode, Prime Agent, Pi, QM, and Mastra. Every prefilled field is editable before you create the harness. The Belvedir Runner and the scaffold drivers bring the agent but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
 
 ## Runs are metered
 
@@ -44,7 +44,7 @@ BELVEDIR_GRADING       # "pass@1" (average success over attempts),
                        # or "mean" (average score)
 ```
 
-The legacy `FRACTAL_*` names are still set as aliases, so existing drivers keep working unchanged.
+The legacy `FRACTAL_*` names are still set as aliases for the key, base URL, run id, and tasks file, so existing drivers keep working unchanged (`BELVEDIR_TASK_ATTEMPTS` and `BELVEDIR_GRADING` are newer contract variables with no aliases). If the task-set file can't be downloaded at startup, the runner refuses to execute the harness and the run fails with a `belvedir:` note rather than running taskless.
 
 ## Which model runs
 
@@ -56,7 +56,7 @@ MODEL_API_BASE  # OpenAI-compatible base URL (default: OpenRouter)
 MODEL_API_KEY   # key for that endpoint, billed to your account
 ```
 
-The default base is OpenRouter (`https://openrouter.ai/api/v1`): one key covers essentially every hosted model, addressed as `vendor/model` ids like `anthropic/claude-sonnet-4.6`. Any other OpenAI-compatible endpoint works too — a Together-deployed fine-tune, your own vLLM — and leaving the base blank infers the provider from the model id. On the hosted platform, OpenRouter-based benchmarks need no API key at all: leave the key blank and Belvedir mints a per-run, spend-capped key, billing the model usage to your organization's balance (a small budget is reserved up front; the unused part is refunded when the run finishes). LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies. GPU drivers (lm-eval, MT-Bench) can serve the model instead of calling one: leave `MODEL_API_BASE` blank and `MODEL` (a HF id) is served in-sandbox with vLLM — the fine-tuned-model path — or set it and they evaluate the endpoint like any other suite.
+The default base is OpenRouter (`https://openrouter.ai/api/v1`): one key covers essentially every hosted model, addressed as `vendor/model` ids like `anthropic/claude-sonnet-5`. Any other OpenAI-compatible endpoint works too — a Together-deployed fine-tune, your own vLLM — and leaving the base blank infers the provider from the model id. On the hosted platform, OpenRouter-based benchmarks need no API key at all: leave the key blank and Belvedir mints a per-run, spend-capped key and covers the model usage under the current free-benchmarks policy. Managed-key runs respect the project's **Chinese models** permission: naming a Chinese-lab model on a project with it off refuses the launch. LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies. GPU drivers (lm-eval, MT-Bench) can serve the model instead of calling one: leave `MODEL_API_BASE` blank and `MODEL` (a HF id) is served in-sandbox with vLLM — the fine-tuned-model path — or set it and they evaluate the endpoint like any other suite.
 
 ## Run with attempts and grading
 
@@ -83,10 +83,10 @@ await flush(); // required: the sandbox exits right after your command
 
 ## Report a score
 
-Before exiting, write `results.json` at the repo root. A top-level numeric `score` on a **0–1 scale** is shown in the dashboard (scores are compared across models in the routing editor, so a percent scale would read as 100× better); everything else is stored verbatim. A score in (1, 100] is read as a percentage and divided by 100, with a `belvedir:` note appended to the run's log tail; a negative score or one past 100 fails the run, as does exiting 0 without a numeric score. An optional `model` field labels which model the run evaluated; runs labeled with a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
+Before exiting, write `results.json` at the repo root. A top-level numeric `score` on a **0–1 scale** is shown in the dashboard (scores are compared across models in the routing editor, so a percent scale would read as 100× better); everything else is stored verbatim. A score in (1, 100] is read as a percentage and divided by 100, with a `belvedir:` note appended to the run's log tail; a negative score or one past 100 fails the run, as does exiting 0 without a numeric score. The platform records which model the run was launched with as `results.model` itself, so attribution never depends on the harness: a `model` field your harness writes is informational, and if it disagrees with the launch configuration it is preserved as `results.model_reported` with a note in the log tail. Runs attributed to a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
 
 ```json
-{ "score": 0.85, "passed": 17, "failed": 3, "model": "claude-sonnet-4-6" }
+{ "score": 0.85, "passed": 17, "failed": 3 }
 ```
 
 ## Benchmark a fine-tuned model
@@ -95,4 +95,4 @@ GPU harnesses that serve the model in-sandbox can also be launched from the Mode
 
 ## Limits
 
-Runs are capped at 1 hour of sandbox time. Results are capped at 256 KB and the stored log tail at 16 KB. A non-zero exit code from your run command marks the run failed. Tasks and groups appear ~30 seconds after the run's sessions go quiet, like any other traffic.
+Runs are capped at 1 hour of sandbox time. Results are capped at 256 KB, the stored log tail at 16 KB, and a harness's Tasks field at 512 KB. An organization can have 4 benchmark runs in flight and 24 in any 24-hour window; past either cap the launch is refused with a clear message. The harness's git repo is checked at launch (a repo that definitively 404s or needs access you don't have refuses the launch instead of failing mid-run). A non-zero exit code from your run command marks the run failed. Tasks and training sets appear ~30 seconds after the run's sessions go quiet, like any other traffic.

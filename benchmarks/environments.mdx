@@ -4,17 +4,25 @@ description: "Turn a task group's real production examples into a runnable bench
 sidebarTitle: "Environments"
 ---
 
-An environment is a harness plus what's in the sandbox. Environments are distilled from your production traffic: each group of similar tasks, once it has collected 50 or more clean successful examples, doubles as a reproducible setting you can train and evaluate against, with the examples defining what good output looks like for that kind of work. The Environments page lists which of your groups have crossed the floor and which are still collecting.
+An environment is a harness plus what's in the sandbox. Environments are distilled from your production traffic: each training set, once it has collected 50 or more **distinct** clean successful examples (near-duplicates are folded together), doubles as a reproducible setting you can train and evaluate against, with the examples defining what good output looks like for that kind of work. The Environments page lists which of your training sets have crossed the floor and which are still collecting.
 
 ## Generated environments
 
-On the Environments page, pick a harness and a group, and the group's successful examples become the task list, one JSON object per line:
+On the Environments page, pick a harness and a training set, and the training set's successful examples become the task list, one JSON object per line:
 
 ```json
 {"task": "...", "expect": "..."}
 ```
 
-where `task` is what the agent is asked to do and `expect` is the known-good outcome the judge grades against. A harness of your own works as an environment as long as it reads the file at `BELVEDIR_TASKS_FILE` and handles that format. Environment runs are ordinary benchmark runs: same sandbox, same pricing, same results contract.
+where `task` is what the agent is asked to do and `expect` is the known-good outcome the judge grades against. Tasks can also carry an explicit verifier tag, which the bare form is shorthand for:
+
+```json
+{"task": "...", "verify": {"kind": "judge", "expect": "..."}}
+```
+
+The default driver is the first-party **Belvedir Runner**: a minimal agent loop (one model call per task) attempts each task, and a pinned independent judge grades whether the attempt accomplishes the task, treating `expect` as evidence of what success looks like rather than the only acceptable answer. A different approach or format than the reference still passes; empty or task-echoing attempts fail without a judge call. The judge is deliberately never the model under test (set `JUDGE_MODEL` to change it; the runner warns if you point it at the model under test), and swapping in your own agent per task is one variable: `BELVEDIR_HARNESS_CMD`, a shell command that receives the task on stdin and prints the attempt.
+
+Only harnesses that accept a task list can back an environment: the Belvedir Runner, the agent scaffolds from the catalog (OpenClaw, Hermes, OpenCode, Prime Agent, Pi, QM, Mastra) or a repo of your own that reads the file at `BELVEDIR_TASKS_FILE` and handles that format. Complete suites like SWE-bench bring their own tasks and are refused. The generated task set caps at 512 KB, and very long inputs or outputs are truncated per field so 50 tasks always fit; a training set whose examples are too long to be useful is refused with a clear message. Environment runs are ordinary benchmark runs: same sandbox, same pricing, same results contract. The Environments page can also run **simulations**: scripted episodes of an environment against an agent model you pick, without a full benchmark launch (`belvedir simulations run <simulation-id> --episodes 8` from the CLI).
 
 ## Use your own codebase as the harness
 
