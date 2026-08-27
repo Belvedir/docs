@@ -30,7 +30,7 @@ One caveat: make the calls with an OpenAI-compatible client (the `openai` SDK, o
 If Belvedir [routes and executes](/inference/mixture-of-models) your inference, chain the two: your app calls Belvedir's router, and the router executes every call through your gateway.
 
 1. In the Vercel dashboard, create an AI Gateway API key for the project that should own the spend.
-2. In the Belvedir dashboard, open your project's settings, go to **Integrations**, click the **Vercel AI Gateway** preset on the AI gateway card, and paste the key.
+2. In the Belvedir dashboard, open your project's settings, go to **Integrations**, click the **Vercel AI Gateway** row, paste the key, and click **Connect**.
 
 That's the whole setup. Your application code doesn't change; it keeps calling Belvedir's router:
 
