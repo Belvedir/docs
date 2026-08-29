@@ -72,6 +72,8 @@ belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
 belvedir benchmarks run <harness-id> --model <trained-model-id>   # GPU eval of a fine-tune
 belvedir benchmarks cancel <run-id>
 belvedir benchmarks delete <harness-id> --yes
+belvedir environments generate my-agent --group <group-id> --preset belvedir   # the default first-party driver
+belvedir environments generate my-agent --group <group-id> --preset belvedir --synthesize   # + gated rubric verifiers
 belvedir environments generate my-agent --group <group-id> --repo https://github.com/you/agent --run "python eval.py"
 belvedir environments simulate my-agent --group <group-id>
 belvedir environments declare my-agent --name "Refund requests" --description "Customer asks for a refund..."
