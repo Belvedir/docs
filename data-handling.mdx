@@ -1,0 +1,43 @@
+---
+title: "Data Handling: What Belvedir Stores, Serves, and Trains On"
+sidebarTitle: "Data handling"
+description: "What Belvedir retains from traces and inference, which models can touch a project's data, and the per-project controls that govern serving and training."
+---
+
+The answers security reviews ask for, in one place: what Belvedir keeps, which models are allowed to see a project's data, and what — if anything — trains on it. Everything here is a property of the current platform; the per-project controls live under **Project Permissions** in the dashboard unless noted.
+
+## What Belvedir stores
+
+- **Traces are stored as your instrumentation sends them.** Every exported span is kept — including prompt and completion text when your SDK or OTel setup emits it (the default). Spans are linked into sessions, and sessions are segmented into tasks, which keep a plain-text input/output distillation plus an embedding. If you need structure without content, set `BELVEDIR_PRIVACY_MODE=true` in the exporting app: spans then carry usage and timing only. Ingest error logs never include span content, only span counts.
+- **Trace data has no automatic expiry.** Traces, sessions, and tasks are retained until you delete them; deleting a project removes all of its data with it.
+- **Batch inference results are retained for 29 days** after a batch ends, then purged (the batch's counts and spend remain). Delete a batch through the API to remove its results sooner. See [batch inference](/api-reference/route#post-apiv1routebatches-batch-inference-at-half-price).
+- **Routed and passthrough inference is metered, not traced.** Belvedir records the model, token counts, and cost for billing. Inference traffic only appears as traces if you instrument your app with the SDK and export spans — the two pipelines are independent.
+
+## Which models can touch a project's data
+
+- **Serving is constrained by enumeration.** The router only ever picks models named in the project's routing config (the Default, Big, and Small tiers, per-group assignments, and — with **Automatic updates** on — a group's observed-record pick among models with production history). Turning **Smart routing** off narrows further: every call is served exactly the model it names, with no substitution ever. There is no separate provider-allowlist policy today; you constrain the model set by what you put in the config and what your code names.
+- **The Chinese models permission is a hard gate, and it covers Belvedir's own models too.** With it off, no Chinese-lab model (Qwen, GLM, DeepSeek, Kimi) can serve the project's traffic on any surface — routing, the Anthropic passthrough, batches — they disappear from the dashboard's pickers, can't be saved into a router, are refused with a clear error when a call names one, and training never uses one as a base. The models Belvedir itself runs over the project's data (task labelling, cleaning, signal scans, the optimizer) switch to non-Chinese models as well: a restricted project's transcripts are never sent to a Chinese-lab model.
+- **You can keep execution on your own accounts entirely.** Registering an AI gateway under the project's **Integrations** settings makes every routed call execute through your own OpenAI-compatible upstream (a Vercel AI Gateway, an OpenRouter account, a LiteLLM proxy) on your key; per-model endpoint registrations under **Cloud Inference** do the same for specific ids. Those calls are metered for observability but never billed by Belvedir.
+- **Hosted execution filters providers by data policy first.** Open models served on the multi-provider marketplace run on providers that pass the data-retention policy on Belvedir's account before speed is considered — the pool never trades privacy for speed.
+
+## What trains on a project's data
+
+- **Training data never leaves the project.** Fine-tuning datasets are built exclusively from the project's own tasks, and the resulting model belongs to that project. There is no cross-project or platform-global training on customer data.
+- **Nothing trains unless the project starts it.** Training runs are launched explicitly from the dashboard or CLI. Auto-training exists but is **off by default** and repeats only a configuration a completed manual run already used, on the schedule or trace threshold the project sets.
+- **Three more per-project gates apply to every run**, automatic or manual: the **Model training** permission turns training off entirely; **Training keys** restricts which API keys' traffic is eligible (empty means all of the project's own traffic); and sessions you report as `"fail"` via [outcomes](/api-reference/outcomes) are excluded from training data.
+- **Training compute is selectable.** Runs execute on a managed training provider by default (training data is sent there for the run); the setup wizard's **Private (our GPUs)** option keeps training data on Belvedir's own hardware instead.
+
+## The per-project controls at a glance
+
+| Control | Where | Effect |
+| --- | --- | --- |
+| Chinese models | Project Permissions | Off: no Chinese-lab model serves, trains on, or analyzes this project's data |
+| Smart routing | Project Permissions | Off: every call serves exactly the model it names, no substitution |
+| Automatic updates | Project Permissions | Off: observed-record model recommendations require explicit approval before serving |
+| Prompt compression | Project Permissions | Opt-in, off by default: prompt text transits the compressor only when enabled |
+| Model training | Project Permissions | Off: no training runs, manual or automatic |
+| Training keys | Project settings | Limits training data to traffic from the selected API keys |
+| AI gateway | Project settings → Integrations | All routed execution moves to your own upstream and account |
+| Privacy mode | `BELVEDIR_PRIVACY_MODE` env var in your app | Spans export usage and structure only, no content |
+
+For contractual questions beyond platform behavior (data-processing terms, subprocessors, compliance attestations), contact us via **Speak to sales** on the Billing page.

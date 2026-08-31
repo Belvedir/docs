@@ -46,6 +46,8 @@
               "guides/vercel",
               "guides/vercel-ai-gateway",
               "guides/otel-agents",
+              "guides/custom-agent-loops",
+              "guides/background-workers",
               "inference/local-models",
               "inference/hosted",
               "importing-traces"
@@ -77,6 +79,7 @@
             "group": "Resources",
             "pages": [
               "cli",
+              "data-handling",
               "troubleshooting/common-issues",
               "troubleshooting/faq"
             ]

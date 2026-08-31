@@ -1,0 +1,49 @@
+---
+title: "Tracing Background Workers: Queues, Threads, and Session Continuity"
+sidebarTitle: "Background workers"
+description: "Keep sessions intact when agent work crosses process and thread boundaries: per-process initialization, passing session ids through queues, and flush rules."
+---
+
+Agent pipelines rarely stay in one process. Work gets enqueued to a Celery or BullMQ worker, runs inside a Temporal activity, fans out to a thread pool, or forks. Each of those boundaries can silently drop spans or strip their session, because the SDK's session context is carried in the process's own execution context. Three rules keep worker spans arriving and linked.
+
+## 1. Initialize in every process
+
+`initialize()` is per process. A queue worker, forked child, or subprocess never inherits the parent's initialization: its LLM calls produce nothing, and — the part that hides the problem — `flush()` in that process silently no-ops instead of erroring. Call `initialize()` at each worker process's startup.
+
+For prefork servers (gunicorn with `--preload`, `multiprocessing` with the fork start method), initialize **after** the fork, in the worker's own startup hook: the span exporter runs on a background thread, and a thread started before `fork()` does not survive into the child.
+
+## 2. Pass the session id as data, and re-open the session
+
+`session()` attaches its context via the OpenTelemetry context (contextvars-backed in Python, async-context-backed in Node). That context follows `await` within the same task, but it never crosses a thread, a process, or a queue hop: an LLM call made inside a Celery task, Temporal activity, or `ThreadPoolExecutor` job arrives session-less even when the job was enqueued from inside `session()`.
+
+The fix is one line on each side. A session id is just a string — carry it in the job payload (or the activity's arguments), and re-open the session inside the worker:
+
+```python
+# Producer — the id travels with the job, not with the context
+queue.enqueue(handle_job, payload, session_id=chat_id)
+
+# Worker — its own process, so initialize() ran at worker startup
+def handle_job(payload, session_id):
+    with loop.session(session_id=session_id):
+        run_agent(payload)  # LLM calls here join the same session
+    loop.flush()
+```
+
+Spans reported under the same id merge into one session on the platform, so the producer's turns and the worker's turns read as one conversation. For threads you spawn yourself, `contextvars.copy_context().run(...)` also carries the context over in Python, but re-opening the session is simpler and works everywhere.
+
+If a workload genuinely has no id to carry (a third-party agent you can't modify), the ingest header `x-belvedir-session-from: trace` promotes each trace's id to a session id — but that makes one session per trace and fragments multi-step work, so pass the real id whenever you control the code.
+
+## 3. Flush before the job ends
+
+Spans export in batches on a background thread. Long-lived workers should `flush()` at the end of each job — it's cheap, and it means a worker killed between jobs loses nothing. Short-lived workers must flush before exit, or the batch dies with the process.
+
+`flush()` is synchronous: calling it immediately before `os._exit()` (or a hard exit in a signal handler) is safe. The hazard is exiting *without* it — `os._exit` and `SIGKILL` skip `atexit` hooks and kill the exporter thread, so an unflushed batch is silently lost.
+
+## Reporting outcomes from workers
+
+Workers are the natural place to report ground truth — the job is where you learn whether the work succeeded. Call `report_outcome(session_id, ...)` after `flush()`, since outcomes only attach to sessions the platform has already ingested. See [POST /api/v1/outcomes](/api-reference/outcomes).
+
+## Next steps
+
+- [Custom agent loops](/guides/custom-agent-loops) — instrumenting the loop the worker runs.
+- [Common issues](/troubleshooting/common-issues) — the symptoms, if worker spans are still missing.

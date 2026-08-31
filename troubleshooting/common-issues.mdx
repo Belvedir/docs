@@ -62,6 +62,10 @@ Fixed in `belvedir@0.4.0` (Node) and `belvedir==0.6.0` (Python): `initialize()` 
 
 Serverless functions (Vercel, Lambda, Cloud Functions) can freeze or exit as soon as the response is sent, before the batching span processor exports. `await flush()` (Python: `loop.flush()`) at the end of every handler that makes LLM calls, before returning.
 
+## Spans from a background worker or thread are missing, or arrive without a session
+
+Two separate causes. `initialize()` is per process: a queue worker, forked child, or subprocess never inherits the parent's initialization, so its spans are never exported — and `flush()` in that process silently no-ops rather than erroring. Call `initialize()` at each worker process's startup (after the fork, for prefork servers). Separately, the session context is carried in the process's execution context: it follows `await`, but never crosses a thread, process, or queue boundary, so LLM calls inside a Celery task, Temporal activity, or thread pool arrive session-less even when the job was enqueued inside `session()`. Pass the session id in the job's payload and re-open `session(session_id=...)` inside the worker; spans under the same id merge into one session. The [Background workers guide](/guides/background-workers) covers the full pattern.
+
 ## Traces show up but no tasks or training sets
 
 Tasks and training sets only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
