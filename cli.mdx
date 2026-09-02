@@ -66,7 +66,7 @@ belvedir review approve <analysis-id>     # opens the PR (or reject)
 belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --design loop2 --keys all
 belvedir autotrain my-agent --traces 500  # or --days 7, or --off
 belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py"
-belvedir benchmarks add my-agent swe-bench-lite --env MODEL=anthropic/claude-sonnet-5
+belvedir benchmarks add my-agent swe-bench-verified --env MODEL=anthropic/claude-sonnet-5,MODAL_TOKEN_ID=...,MODAL_TOKEN_SECRET=...
 belvedir benchmarks catalog               # the public presets and their env
 belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
 belvedir benchmarks run <harness-id> --model <trained-model-id>   # GPU eval of a fine-tune

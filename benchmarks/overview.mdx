@@ -14,11 +14,11 @@ the thing      the agent      what it        how it's
 under test     scaffold       attempts       scored
 ```
 
-Complete suites like SWE-bench bring their own tasks and grading. Scaffold-style harnesses like OpenClaw are **custom benchmarks**: you supply the task list (the Tasks field on the harness) and an LLM judge grades the outcomes, so you can benchmark exactly the work your agent does in production.
+Complete suites like SWE-bench bring their own tasks and grading. The Harbor-format suites (SWE-bench Verified, Terminal-Bench, τ³-bench, GAIA, Aider Polyglot) run through [Harbor](https://harborframework.com): pick the agent scaffold with `HARBOR_AGENT` (terminus-2 by default, or any Harbor agent such as claude-code), cap the run with `HARBOR_N_TASKS` (10 by default, so it fits the one-hour sandbox), and supply `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`: each task runs in its own container on your Modal account, because Belvedir never places its own credentials inside a sandbox. Scaffold-style harnesses like OpenClaw are **custom benchmarks**: you supply the task list (the Tasks field on the harness) and an LLM judge grades the outcomes, so you can benchmark exactly the work your agent does in production.
 
 ## Start from the catalog
 
-The New Harness page offers one-click presets, starting with the first-party **Belvedir Runner** — a minimal agent loop with a pinned independent LLM judge, and the default driver for [generated environments](/benchmarks/environments) — alongside common suites (SWE-bench Lite, τ-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench, vLLM-served) and agent scaffolds: OpenClaw, Hermes Agent, OpenCode, Prime Agent, Pi, QM, and Mastra. Every prefilled field is editable before you create the harness. The Belvedir Runner and the scaffold drivers bring the agent but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
+The New Harness page offers one-click presets, starting with the first-party **Belvedir Runner** — a minimal agent loop with a pinned independent LLM judge, and the default driver for [generated environments](/benchmarks/environments) — alongside common suites (SWE-bench Verified, τ³-bench, Terminal-Bench, GAIA, Aider Polyglot, lm-eval and MT-Bench, vLLM-served) and agent scaffolds: OpenClaw, Hermes Agent, OpenCode, Prime Agent, Pi, QM, and Mastra. Every prefilled field is editable before you create the harness. The Belvedir Runner and the scaffold drivers bring the agent but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
 
 ## Runs are metered
 
