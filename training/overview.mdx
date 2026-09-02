@@ -8,7 +8,7 @@ Fine-tune an open model on your own production traffic. Belvedir takes the succe
 
 ## What it trains on
 
-Successful tasks that captured both an input and an output, shown as the example count on the Training page. You can train on everything the agent does well, or pick a single training set to distill one kind of work into a specialist. Training needs at least 200 examples; keep sending traces until you cross the floor. Datasets are capped at 1,000 examples; the newest eligible tasks win.
+Successful tasks that captured both an input and an output, shown as the example count on the Training page. One in five tasks is held out for evaluation and never trained on; those held-out tasks are what generated environments score against, so an environment run never measures a model on its own training data. You can train on everything the agent does well, or pick a single training set to distill one kind of work into a specialist. Training needs at least 200 examples; keep sending traces until you cross the floor. Datasets are capped at 1,000 examples; the newest eligible tasks win.
 
 ## Training methods
 
