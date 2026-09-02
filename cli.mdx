@@ -73,6 +73,7 @@ belvedir benchmarks run <harness-id> --model <trained-model-id>   # GPU eval of 
 belvedir benchmarks cancel <run-id>
 belvedir benchmarks delete <harness-id> --yes
 belvedir environments generate my-agent --group <group-id> --preset belvedir   # the default first-party driver
+belvedir environments export my-agent --id <environment-id> --out ./env       # Harbor dataset: harbor run -p ./env
 belvedir environments generate my-agent --group <group-id> --preset belvedir --synthesize   # + gated rubric verifiers
 belvedir environments generate my-agent --group <group-id> --repo https://github.com/you/agent --run "python eval.py"
 belvedir environments simulate my-agent --group <group-id>

@@ -28,6 +28,21 @@ Only harnesses that accept a task list can back an environment: the Belvedir Run
 
 On hosted Belvedir, the wizard offers **Synthesize verifiers**: instead of grading every task against its recorded output alone, Belvedir writes a rubric per task — specific, checkable criteria distilled from the training set's own successes *and* failures — and the runner grades each criterion independently with partial credit. Rubrics only ship if they survive two gates: they must reproduce the outcomes of held-out examples the synthesis never saw (pass the recorded successes, fail the recorded failures), and no-effort attempts must not pass them. A synthesis that fails its gates falls back to the standard judge automatically, and the wizard tells you. Synthesis takes a few minutes and needs a training set slightly above the usual floor (the gate set is drawn from the training side of the split, on top of the 50 examples). Complete suites like SWE-bench bring their own tasks and are refused. The generated task set caps at 512 KB, and very long inputs or outputs are truncated per field so 50 tasks always fit; a training set whose examples are too long to be useful is refused with a clear message. Environment runs are ordinary benchmark runs: same sandbox, same pricing, same results contract. The Environments page can also run **simulations**: scripted episodes of an environment against an agent model you pick, without a full benchmark launch (`belvedir simulations run <simulation-id> --episodes 8` from the CLI).
 
+## Run an environment under Harbor
+
+Every environment exports as a [Harbor](https://harborframework.com) dataset, so you can run it on your own machine, against any Harbor agent, or feed it to a Harbor-compatible trainer:
+
+```bash
+belvedir environments export <project> --id <environment id> --out ./env
+uv tool install harbor --with-editable /path/to/belvedir-platform/harbor   # the Belvedir agent, inside Harbor's own venv
+export JUDGE_API_KEY=$OPENROUTER_API_KEY MODEL_API_KEY=$OPENROUTER_API_KEY
+harbor run -p ./env -a oracle -y                                                   # validate the verifier: expect 1.0
+harbor run -p ./env -a belvedir_harbor.agent:BelvedirAgent -m openai/gpt-4.1-mini -y   # score a model
+harbor run -p ./env -a claude-code -m anthropic/claude-sonnet-4-5 -y                # or any Harbor agent
+```
+
+Each task becomes a directory: the prompt in `instruction.md` (with a line telling the agent to write its final answer to `/app/answer.md`), a `task.toml`, a tiny shared Dockerfile, and a verifier in `tests/` that grades the answer with the same independent judge the Belvedir Runner uses, against the recorded known-good answer or the synthesized rubric. The judge's key is never in the export: `task.toml` references `JUDGE_API_KEY` from your environment, which is why `harbor run` asks to confirm host access (`-y` skips the prompt). `solution/solve.sh` writes the recorded answer so `-a oracle` checks the verifier before you spend on a model. Harbor imports a custom agent inside its own interpreter, so the Belvedir agent has to be installed there (the `--with-editable` above, or `PYTHONPATH=/path/to/harbor`); the oracle and Harbor's built-in agents need only Harbor itself. The Python package is not yet on PyPI. Rewards land in Harbor's jobs directory; Harbor prints the mean. Add `--limit 3` to the export for a smoke run.
+
 ## Use your own codebase as the harness
 
 The best harness is **your own codebase**: pick one of the project's connected repos and the sandbox clones your real agent (private repos authenticate through your GitHub connection automatically; no token to paste), so the model is benchmarked in the exact harness it runs in production. Your repo needs a small entrypoint that reads the task file, runs each task through your agent, and writes `results.json` with a numeric `score`; the same automatic authentication applies to any harness whose repo is connected to the project.
