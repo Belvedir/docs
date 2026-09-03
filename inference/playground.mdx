@@ -1,0 +1,41 @@
+---
+title: "Playground"
+description: "Try a prompt on any model Belvedir can serve, and compare models side by side on the same conversation."
+sidebarTitle: "Playground"
+---
+
+The Playground is the dashboard's try-it surface. Open **Playground** in the sidebar (directly under **API Keys**), pick a model, and send a message. Add up to four models and every message you send goes to all of them at once, so you can compare answers, speed, and cost on the same prompt.
+
+## Comparing models
+
+Each column is one model. Click **Add model** for another column (up to four) and use the picker at the top of a column to change its model at any time. The composer at the bottom sends your message to every column.
+
+Every column keeps its own conversation: a follow-up message replays that model's own earlier answers, not another model's. A column you add or swap mid-conversation only sees the turns it answered itself.
+
+Under each reply, a stats line shows:
+
+- total time and time to first token
+- input and output tokens
+- the cost of that reply, as it is billed to your organization
+
+Press **Stop** to cut every reply short. A partial reply stays in that column's conversation, so a follow-up can build on it.
+
+## System prompt and parameters
+
+Open **System prompt and parameters** above the columns to set a system message, a temperature (0 to 2), and a maximum reply length. They apply to every column. Models that reject sampling controls ignore the temperature; a very low token cap turns a thinking model's reasoning off so the answer fits.
+
+## Which models are listed
+
+The picker lists the hosted models the [router can serve](/inference/models), grouped by provider, plus any models you registered on the **Cloud Inference** page as **Your endpoints**. You can also type any other model identifier the router accepts.
+
+If your project has Chinese-lab models turned off under **Project Permissions**, they are neither listed nor served here.
+
+Fine-tuned models don't run in the Playground until you deploy them on your own provider and register the endpoint on the Cloud Inference page. Local models never run here.
+
+## Billing
+
+A Playground call is a normal inference call on Belvedir's account: it is charged to your organization at the same discounted per-token rate as a routed call, and it appears on your project's usage page as **Playground**. It is not counted as router traffic, so it never changes the savings your Routers report.
+
+Calls to your own registered endpoints run on your provider account and cost nothing on Belvedir. That includes a default gateway: if your project has one registered on the Cloud Inference page, every catalog model in the Playground runs through it, and the column footer says so instead of showing a rate.
+
+The model you pick is the model that answers. The Playground doesn't route, pin, or cascade the call, so what you see is exactly what that model does with the prompt.

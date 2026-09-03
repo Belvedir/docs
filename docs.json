@@ -58,6 +58,7 @@
             "pages": [
               "inference/mixture-of-models",
               "inference/models",
+              "inference/playground",
               "inference/capabilities"
             ]
           },
