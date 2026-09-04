@@ -75,6 +75,8 @@ belvedir benchmarks delete <harness-id> --yes
 belvedir environments generate my-agent --group <group-id> --preset belvedir   # the default first-party driver
 belvedir environments export my-agent --id <environment-id> --out ./env       # Harbor dataset: harbor run -p ./env
 belvedir environments generate my-agent --group <group-id> --preset belvedir --synthesize   # + gated rubric verifiers
+# --synthesize holds one request open for the whole pass (6–10 minutes) and needs @belvedir/cli 0.3.9 or newer;
+# older versions print "read ETIMEDOUT" or "fetch failed" partway through while the environment still lands — re-run to pick it up.
 belvedir environments generate my-agent --group <group-id> --repo https://github.com/you/agent --run "python eval.py"
 belvedir environments simulate my-agent --group <group-id>
 belvedir environments declare my-agent --name "Refund requests" --description "Customer asks for a refund..."
