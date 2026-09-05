@@ -64,7 +64,7 @@ Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is 
 | GPT-4 | `gpt-4` |
 | GPT-3.5 Turbo | `gpt-3.5-turbo` |
 
-That is every callable chat model OpenAI's API serves, at OpenAI's list prices; dated snapshot ids and the `-chat-latest` variants resolve to the same rates. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak; they return a clear error naming the base chat model (or a chat-latest variant) to use instead.
+GPT-6 Astra accepts function tools only on OpenAI's Responses API, so the router sends Astra tool calls there and returns the usual chat-completions shape (JSON or streamed); your OpenAI client code does not change. That is every callable chat model OpenAI's API serves, at OpenAI's list prices; dated snapshot ids and the `-chat-latest` variants resolve to the same rates. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak; they return a clear error naming the base chat model (or a chat-latest variant) to use instead.
 
 ## xAI
 
