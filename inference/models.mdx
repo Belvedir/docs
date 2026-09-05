@@ -16,6 +16,7 @@ Served directly on Anthropic's API. Claude models are also servable through the 
 
 | Model | Identifier |
 | --- | --- |
+| Claude Fable 5.1 | `anthropic/claude-fable-5-1` |
 | Claude Fable 5 | `anthropic/claude-fable-5` |
 | Claude Opus 5 | `anthropic/claude-opus-5` |
 | Claude Opus 4.8 | `anthropic/claude-opus-4-8` |
@@ -29,12 +30,15 @@ Served directly on Anthropic's API. Claude models are also servable through the 
 
 That is every model Anthropic's API serves; dated snapshot ids (`claude-opus-4-5-20251101`, ...) resolve to the same rates.
 
+Claude Fable 5.1 does not accept forced tool choice (`tool_choice: "required"` or a named function; Anthropic returns a 400). On the router (sync and batch) the platform downgrades those to `"auto"` so the call still serves (the response carries `x-belvedir-retry: tool-choice-auto`); steer the model toward a tool from the prompt instead. On the Messages passthrough the request goes through untranslated, so send `{"type": "auto"}` yourself. Fable 5.1's cache reads bill at a quarter of Fable 5's rate; see the Pricing page.
+
 ## OpenAI
 
 Served directly on OpenAI's API. Bare ids are the norm; the `openai/` prefix is also accepted. Any current OpenAI chat id (`gpt-*`, `chatgpt-*`, o-series) routes here; the priced line-up:
 
 | Model | Identifier |
 | --- | --- |
+| GPT-6 Astra | `gpt-6-astra` |
 | GPT-5.6 Sol | `gpt-5.6-sol` |
 | GPT-5.6 Terra | `gpt-5.6-terra` |
 | GPT-5.6 Luna | `gpt-5.6-luna` |

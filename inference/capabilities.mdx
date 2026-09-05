@@ -59,11 +59,13 @@ Each of these fails fast with a clear error rather than an opaque upstream failu
 
 ## Reliability backstops
 
-Three server-side retries protect you from paying for empty answers; when one fired, the response says so in the `x-belvedir-retry` header:
+Server-side retries protect you from paying for empty answers and doomed requests; when one fired, the response says so in the `x-belvedir-retry` header:
 
 - **`thinking-disabled`**: a reasoning model spent the whole completion budget on its thinking trace and returned an empty answer (`finish_reason: "length"`). Belvedir retries once, same model, thinking off. This fires even when your own reasoning setting caused it: your control wins on the first attempt, but an empty paid answer beats honoring it twice.
 - **`content-filter-fallback`**: a model's safety filter returned an empty answer for a prompt the router chose it for. Belvedir retries on your routing config's other tiers, cheapest suitable first. Only when the router picked the model: if your code named it, you get that model's verdict.
 - A model that rejects a thinking-off switch with `400` (some models cannot run with thinking disabled) is retried once without it. The switch may be Belvedir's own or the translation of your off setting: the router picks the serving model, so a rejection isn't something your code can fix.
+
+- **`tool-choice-auto`**: the serving model rejects forced tool choice (Claude Fable 5.1 returns `400` on `tool_choice: "required"` or a named function), so Belvedir sent the call with `tool_choice: "auto"` instead. The tools stay declared; steer the model toward the tool in your prompt, and do not assume a `tool_calls` finish. No first attempt is metered: the downgrade happens before the call.
 
 The first attempt is still metered on the first two: you pay for what the provider ran, and the retry saves the call.
 
