@@ -36,7 +36,9 @@ Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap 
 
 If your project uses [model routing](/api-reference/route), register the deployment's base URL and provider key under **Cloud Inference** in the dashboard. Calls the router sends to that model then execute on your endpoint with your key: this is how the router serves your fine-tuned and self-hosted models, and those calls are metered for the usage graphs but never billed.
 
-If the endpoint knows the model under a different id (a Together deploy's generated name, or a provider model you want to serve under a name of your own), fill in **Model id your endpoint expects**: requests go out with that id, while routers, the Playground and the usage graphs keep the name you registered. Leave it blank when the ids match.
+If the endpoint knows the model under a different id (a Together deploy's generated name, or a provider model you want to serve under a name of your own), fill in **Model id it runs as**: requests go out with that id, while routers, the Playground and the usage graphs keep the name you registered. Leave it blank when the ids match.
+
+Leave the base URL blank instead, and the same field names a hosted model Belvedir serves: your name then runs on Belvedir's account as that model, billed at its rate like any hosted call, with no key of yours stored.
 
 ## Default gateway (optional)
 
