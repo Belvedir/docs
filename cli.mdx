@@ -12,7 +12,7 @@ belvedir login          # opens your browser (Google sign-in)
 belvedir projects
 ```
 
-`belvedir login` opens the Belvedir dashboard, where you're usually already signed in — click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json`, refreshes automatically, and `belvedir logout` forgets it.
+`belvedir login` opens the Belvedir dashboard, where you're usually already signed in: click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json`, refreshes automatically, and `belvedir logout` forgets it.
 
 ## Operating systems
 
@@ -28,52 +28,56 @@ belvedir whoami                      # the signed-in account
 belvedir orgs                        # organizations, roles, balances
 belvedir projects                    # projects you can access
 belvedir keys my-agent               # your API keys in a project
-belvedir conversations my-agent --n 50
+belvedir conversations my-agent -n 50
 belvedir traces my-agent             # raw spans (name, model, status)
 belvedir tasks my-agent
 belvedir groups my-agent             # training sets
 belvedir cleaning my-agent           # the cleaning log
-belvedir models                      # fine-tuned models
+belvedir models [my-agent]           # fine-tuned models (all projects, or one)
 belvedir runs my-agent               # training + optimization runs
-belvedir benchmarks
+belvedir benchmarks [my-agent]       # harnesses + recent runs
 belvedir benchmarks show <run-id>    # status, score, log tail
 belvedir environments my-agent       # generated environments + simulations
+belvedir harness my-agent            # harness maps + their status
+belvedir repos my-agent              # the project's connected repos
 belvedir review my-agent             # proposals awaiting review
 belvedir setup my-agent              # target / loops / design / autonomy
 belvedir routing my-agent
 belvedir members my-org              # roster + pending invites
 belvedir access my-agent             # per-member project access
-belvedir balance
+belvedir balance [my-org]            # organization credit balance
 belvedir billing my-org              # the org's credit ledger
 belvedir github                      # connected GitHub accounts
+belvedir help                        # every command and flag
 ```
 
-Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`, and list reads take `--n <count>` (default 20, max 200).
+Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`, and list reads take `-n <count>` (default 20, max 200).
 
 ## Acting
 
 ```bash
-belvedir projects create my-agent
+belvedir projects create my-agent [--org <org-id>]
 belvedir projects rename my-agent "my agent v2"
 belvedir projects delete my-agent --yes
 belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
 belvedir train my-agent --method sft      # launch a LoRA training run (sft | opsd | rl)
+belvedir train my-agent --base meta-llama/Llama-3.1-8B-Instruct --group <group-id> --hf-token hf_...   # pick the base, one training set, and a token for gated bases
 belvedir train my-agent --method rl --reward similarity --algorithm auto
 belvedir train cancel <run-id>
 belvedir analyze my-agent                 # queue an optimization run
 belvedir review approve <analysis-id>     # opens the PR (or reject)
 belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --design loop2 --keys all
 belvedir autotrain my-agent --traces 500  # or --days 7, or --off
-belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py"
+belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py" [--install "pip install -e ."] [--compute cpu|gpu] [--tasks-file ./tasks.jsonl]
 belvedir benchmarks add my-agent swe-bench-verified --env MODEL=anthropic/claude-sonnet-5,MODAL_TOKEN_ID=...,MODAL_TOKEN_SECRET=...
 belvedir benchmarks catalog               # the public presets and their env
 belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
-belvedir benchmarks run <harness-id> --model <trained-model-id>   # GPU eval of a fine-tune
+belvedir benchmarks run <harness-id> --model <trained-model-id> [--hf-token hf_...]   # GPU eval of a fine-tune (token for gated bases)
 belvedir benchmarks cancel <run-id>
 belvedir benchmarks delete <harness-id> --yes
 belvedir environments generate my-agent --group <group-id> --preset belvedir   # the default first-party driver
-belvedir environments export my-agent --id <environment-id> --out ./env       # Harbor dataset: harbor run -p ./env
+belvedir environments export my-agent --id <environment-id> --out ./env [--limit 3]   # Harbor dataset: harbor run -p ./env
 belvedir environments generate my-agent --group <group-id> --preset belvedir --synthesize   # + gated rubric verifiers
 # --synthesize starts the pass on the worker and polls it (6–10 minutes; --no-wait returns at once).
 # Needs @belvedir/cli 0.4.0 or newer; older versions hold one request open and print an error partway
@@ -84,20 +88,25 @@ belvedir environments simulate my-agent --group <group-id>
 belvedir environments declare my-agent --name "Refund requests" --description "Customer asks for a refund..."
 belvedir signals my-agent                 # error/slow/frustration scan
 belvedir validation my-agent              # success rates + shipped deltas
-belvedir routing stats my-agent           # per-group model records + recommendation
-belvedir simulations run <simulation-id> --episodes 8
+belvedir routing stats my-agent           # per-training-set model records + recommendation
+belvedir simulations run <simulation-id> --episodes 8 [--model <litellm-id>]   # the model that plays the agent
 belvedir harness map my-agent you/agent   # map a connected repo's harness
-belvedir repos add my-agent you/agent     # project repository access
+belvedir repos add my-agent you/agent     # project repository access (repos remove to drop it)
 belvedir models download <model-id>       # signed adapter URL
 belvedir deploy <model-id>                # Together deploy, start to endpoint
 belvedir billing payg my-org              # save the org's card (auto reload / pay as you go)
+belvedir billing payg --on|--off|--remove # manage pay as you go on the saved card
 belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --small Qwen/Qwen3.5-9B --threshold 0.5
 belvedir routing pin my-agent <group-id> qwen3:4b
 belvedir routing unpin my-agent <group-id>
 belvedir routing routers my-agent         # all routers: auto + drafts
 belvedir routing promote <router-id>      # switch which router serves traffic
 belvedir orgs create "my team"
-belvedir members invite my-org teammate@example.com
+belvedir orgs rename my-org "my team v2"  # owner only
+belvedir orgs delete my-org --yes         # empty orgs only, owner only
+belvedir members invite my-org teammate@example.com [--role member|admin]
+belvedir members remove my-org <user-id>  # your own id = leave
+belvedir members role my-org <user-id> admin|member   # owner only
 belvedir access set my-agent <user-id> off
 belvedir outcome my-agent <session-id> fail
 belvedir billing buy my-org --amount 20   # opens Stripe Checkout
@@ -105,14 +114,14 @@ belvedir billing redeem my-org WELCOME
 belvedir github connect                   # opens the GitHub App install page
 ```
 
-Training and benchmark runs are currently free (only inference bills, exactly like the dashboard); write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it — the flow finishes on the web. One deliberate gap: `belvedir keys create` doesn't exist — API keys are minted in the dashboard (Platform → API Keys), where the raw key is shown once.
+Training and benchmark runs are currently free (only inference bills, exactly like the dashboard); write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it; the flow finishes on the web. One deliberate gap: `belvedir keys create` doesn't exist. API keys are minted in the dashboard (Platform → API Keys), where the raw key is shown once.
 
 ## Using with coding agents
 
-If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching paid runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly. Prefer a member account with project exclusions over the org owner's account for agent machines, and never approve a `cli-auth` link you didn't initiate — the approve page shows a verification code that must match the one your terminal printed.
+If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching paid runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly. Prefer a member account with project exclusions over the org owner's account for agent machines, and never approve a `cli-auth` link you didn't initiate: the approve page shows a verification code that must match the one your terminal printed.
 
 ## Notes
 
 - Requires Node 18 or newer. The package has no dependencies.
-- Sending traces is not the CLI's job — that's the [`belvedir`](/sdk/installation) SDK.
-- Self-hosted or staging platform: `belvedir login --platform https://your-host`.
+- Sending traces is not the CLI's job; that's the [`belvedir`](/sdk/installation) SDK.
+- Self-hosted or staging platform: `belvedir login --platform https://your-host`. The URL must be `https://`; login refuses plain `http://` and any `localhost` / `127.0.0.1` host, since the session it mints is a real account session.

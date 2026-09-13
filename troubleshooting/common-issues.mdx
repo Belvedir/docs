@@ -10,7 +10,7 @@ Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `
 
 ## Ingest or the router returns 402 or 429
 
-Neither is a code bug. A `402` from the router means the organization's credit balance is used up: buy credits on **Organization Settings → Billing**, or turn on **Auto refill** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (run past zero, charged hourly) is enabled per organization on request via **Speak to sales** on the Billing page. A `402` from trace ingest means the project has no organization to bill to — trace ingestion itself is not billed today. A `429` is the per-key rate limit: ingest allows 2 requests/second sustained with a burst of 120, the router 25 requests/second with a burst of 300 (adjustable per organization); back off for the `Retry-After` seconds and retry.
+Neither is a code bug. A `402` from the router means the organization's credit balance is used up: buy credits on **Organization Settings → Billing**, or turn on **Auto reload** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (run past zero, charged hourly) is enabled per organization on request via **Speak to sales** on the Billing page. A `402` from trace ingest means the project has no organization to bill to; trace ingestion itself is not billed today. A `429` is the per-key rate limit: ingest allows 2 requests/second sustained with a burst of 120, the router 25 requests/second with a burst of 300 (adjustable per organization); back off for the `Retry-After` seconds and retry.
 
 ## `initialize() failed` warning mentioning `parseKeyPairsIntoRecord` (Node)
 
@@ -18,7 +18,7 @@ A dependency conflict in `belvedir@0.3.1`: two incompatible OpenTelemetry genera
 
 ## Traces silently missing after July 2026
 
-SDK versions before `@fractalresearch/loop@0.1.5` / `fractal-loop 0.1.1` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `belvedir` (npm or PyPI), or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`.
+Node SDK versions before `@fractalresearch/loop@0.1.5` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `belvedir`, or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`. Every published Python release (`belvedir-loop` 0.2.0 and later, and `belvedir`) already defaults to the live host; only a Python SDK built from a pre-rename checkout is affected.
 
 ## No traces appearing on Vercel
 
@@ -54,9 +54,9 @@ The AI SDK's native provider packages and its built-in gateway routing use proto
 
 ## Conversations captured, but the last assistant reply is missing
 
-Streamed responses used to be the culprit: when an app called an OpenAI-compatible endpoint with raw `fetch` and `stream: true` (common in agent frameworks that ship their own HTTP client), the request's message history was recorded but the streamed completion never was — so a conversation's final assistant turn only appeared once a later turn embedded it in history, and a session's very last reply was lost.
+Streamed responses used to be the culprit: when an app called an OpenAI-compatible endpoint with raw `fetch` and `stream: true` (common in agent frameworks that ship their own HTTP client), the request's message history was recorded but the streamed completion never was, so a conversation's final assistant turn only appeared once a later turn embedded it in history, and a session's very last reply was lost.
 
-Fixed in `belvedir@0.4.0` (Node) and `belvedir==0.6.0` (Python): `initialize()` also instruments raw HTTP — `globalThis.fetch` in Node, `requests`/`httpx` in Python — for `POST .../chat/completions` calls, accumulating streamed deltas in the background and recording the full assistant message, tool calls, and usage when the stream ends. Update with `npm install belvedir@latest` / `pip install -U belvedir`. If you're pinned below those versions, route the call through the `openai` client (patched via `instrumentModules` in Node) instead of raw HTTP.
+Fixed in `belvedir@0.4.0` (Node) and `belvedir==0.6.0` (Python): `initialize()` also instruments raw HTTP (`globalThis.fetch` in Node, `requests`/`httpx` in Python) for `POST .../chat/completions` calls, accumulating streamed deltas in the background and recording the full assistant message, tool calls, and usage when the stream ends. Update with `npm install belvedir@latest` / `pip install -U belvedir`. If you're pinned below those versions, route the call through the `openai` client (patched via `instrumentModules` in Node) instead of raw HTTP.
 
 ## Spans appear locally but not in production
 
@@ -64,11 +64,15 @@ Serverless functions (Vercel, Lambda, Cloud Functions) can freeze or exit as soo
 
 ## Spans from a background worker or thread are missing, or arrive without a session
 
-Two separate causes. `initialize()` is per process: a queue worker, forked child, or subprocess never inherits the parent's initialization, so its spans are never exported — and `flush()` in that process silently no-ops rather than erroring. Call `initialize()` at each worker process's startup (after the fork, for prefork servers). Separately, the session context is carried in the process's execution context: it follows `await`, but never crosses a thread, process, or queue boundary, so LLM calls inside a Celery task, Temporal activity, or thread pool arrive session-less even when the job was enqueued inside `session()`. Pass the session id in the job's payload and re-open `session(session_id=...)` inside the worker; spans under the same id merge into one session. The [Background workers guide](/guides/background-workers) covers the full pattern.
+Two separate causes. `initialize()` is per process: a queue worker, forked child, or subprocess never inherits the parent's initialization, so its spans are never exported, and `flush()` in that process silently no-ops rather than erroring. Call `initialize()` at each worker process's startup (after the fork, for prefork servers). Separately, the session context is carried in the process's execution context: it follows `await`, but never crosses a thread, process, or queue boundary, so LLM calls inside a Celery task, Temporal activity, or thread pool arrive session-less even when the job was enqueued inside `session()`. Pass the session id in the job's payload and re-open `session(session_id=...)` inside the worker; spans under the same id merge into one session. The [Background workers guide](/guides/background-workers) covers the full pattern.
 
 ## Traces show up but no tasks or training sets
 
 Tasks and training sets only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
+
+## `withSession("id", fn)` produced traces with no session (Node, before 0.3.1)
+
+Versions of the Node SDK before `belvedir@0.3.1` only read the object form, `withSession({ sessionId }, fn)`. Passing a bare string was silently ignored: spans arrived with no session id, so no tasks or training sets formed and `reportOutcome` for that id returned false (the platform answered 404). Since 0.3.1 both forms work, and a call with no session id logs a warning instead of failing silently. Run `npm install belvedir@latest`, or pass `{ sessionId }` if you must stay pinned.
 
 ## `reportOutcome` returns false (or `POST /api/v1/outcomes` returns 404)
 

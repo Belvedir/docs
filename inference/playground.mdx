@@ -4,7 +4,7 @@ description: "Try a prompt on any model Belvedir can serve, and compare models s
 sidebarTitle: "Playground"
 ---
 
-The Playground is the dashboard's try-it surface. Open **Playground** in the sidebar (directly under **API Keys**), pick a model, and send a message. Add up to four models and every message you send goes to all of them at once, so you can compare answers, speed, and cost on the same prompt.
+The Playground is the dashboard's try-it surface. Open **Playground** in the sidebar (in the top group, after **API Keys** and **Models**), pick a model, and send a message. Add up to four models and every message you send goes to all of them at once, so you can compare answers, speed, and cost on the same prompt.
 
 ## Comparing models
 
@@ -36,6 +36,6 @@ Fine-tuned models don't run in the Playground until you deploy them on your own 
 
 A Playground call is a normal inference call on Belvedir's account: it is charged to your organization at the same discounted per-token rate as a routed call, and it appears on your project's usage page as **Playground**. It is not counted as router traffic, so it never changes the savings your Routers report.
 
-Calls to your own registered endpoints run on your provider account and cost nothing on Belvedir. That includes a default gateway: if your project has one registered on the Cloud Inference page, every catalog model in the Playground runs through it, and the column footer says so instead of showing a rate.
+Calls to your own registered endpoints run on your provider account and cost nothing on Belvedir. That includes a default gateway: if your project has one registered under **Project settings → Integrations**, every catalog model in the Playground runs through it, and the column footer says so instead of showing a rate.
 
 The model you pick is the model that answers. The Playground doesn't route, pin, or cascade the call, so what you see is exactly what that model does with the prompt.

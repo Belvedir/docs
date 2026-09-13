@@ -1,21 +1,35 @@
 ---
 title: "LLM Providers Supported by Belvedir Auto-Instrumentation"
 sidebarTitle: "Providers"
-description: "Belvedir auto-instruments eight LLM providers with zero extra code. OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more are fully supported."
+description: "Belvedir auto-instruments the major LLM providers with zero extra code. OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more are supported; the exact list differs by SDK."
 ---
 
-The SDK auto-instruments these LLM providers with zero additional code:
+Both SDKs wrap OpenLLMetry, so the provider list is the set of instrumentations the underlying Traceloop SDK ships for that language. They differ, so check the list for your SDK:
 
-- OpenAI
+**Node (`belvedir` on npm)**
+
+- OpenAI (Azure OpenAI works through the same `openai` client)
 - Anthropic
 - Cohere
-- Azure OpenAI
 - Amazon Bedrock
-- Google Vertex AI
-- Replicate
-- HuggingFace
+- Google Vertex AI and Google Generative AI (Gemini)
+- Together
+- Frameworks: LangChain, LlamaIndex, MCP
+- Vector stores: Chroma, Pinecone, Qdrant
 
-Both SDKs also auto-instrument the LangChain and LlamaIndex frameworks.
+Replicate and HuggingFace are not instrumented on Node; call them through an OpenAI-compatible endpoint (below) or emit spans yourself.
+
+**Python (`belvedir` on PyPI)**
+
+- OpenAI (Azure OpenAI works through the same `openai` client)
+- Anthropic
+- Cohere
+- Amazon Bedrock and SageMaker
+- Google Vertex AI and Google Generative AI (Gemini)
+- Mistral, Groq, Together, Replicate, Ollama, IBM watsonx, Aleph Alpha, Writer, Voyage AI
+- HuggingFace Transformers
+- Frameworks: LangChain, LlamaIndex, Haystack, CrewAI, LiteLLM, OpenAI Agents, Agno, MCP
+- Vector stores: Chroma, Pinecone, Qdrant, Weaviate, Milvus, LanceDB, Marqo
 
 Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), self-hosted [vLLM](https://docs.vllm.ai)) work through the OpenAI SDK, and as of `belvedir` 0.4.0 (Node) / 0.6.0 (Python) also through raw `fetch` / `requests` / `httpx` calls to any OpenAI-compatible `chat/completions` endpoint, streamed responses included, with no client SDK at all. See [Cloud Inference](/inference/hosted).
 

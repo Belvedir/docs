@@ -30,7 +30,7 @@ Served directly on Anthropic's API. Claude models are also servable through the 
 
 That is every model Anthropic's API serves; dated snapshot ids (`claude-opus-4-5-20251101`, ...) resolve to the same rates.
 
-Claude Fable 5.1 does not accept forced tool choice (`tool_choice: "required"` or a named function; Anthropic returns a 400). On the router (sync and batch) the platform downgrades those to `"auto"` so the call still serves (the response carries `x-belvedir-retry: tool-choice-auto`); steer the model toward a tool from the prompt instead. On the Messages passthrough the request goes through untranslated, so send `{"type": "auto"}` yourself. Fable 5.1's cache reads bill at a quarter of Fable 5's rate; see the Pricing page.
+Claude Fable 5.1 does not accept forced tool choice (`tool_choice: "required"` or a named function; Anthropic returns a 400). On the router (sync and batch) the platform downgrades those to `"auto"` so the call still serves; the sync response carries `x-belvedir-retry: tool-choice-auto`, while batch results carry no marker. Steer the model toward a tool from the prompt instead. On the Messages passthrough the request goes through untranslated, so send `{"type": "auto"}` yourself. Fable 5.1's cache reads bill at a quarter of Fable 5's rate; see the Pricing page.
 
 ## OpenAI
 
@@ -88,6 +88,7 @@ Served directly on xAI's API, which reports the exact cost per call; that report
 | Gemma 4 31B | `google/gemma-4-31B-it` | OpenRouter (fastest provider) |
 | Gemma 4 31B NVFP4 | `nvidia/Gemma-4-31B-IT-NVFP4` | Sail Research (American compute) |
 | Qwen 3.5 9B | `Qwen/Qwen3.5-9B` | OpenRouter |
+| Qwen3 235B A22B | `Qwen/Qwen3-235B-A22B` | OpenRouter |
 | Llama 3.3 70B Instruct | `meta-llama/Llama-3.3-70B-Instruct` | OpenRouter |
 | Llama 3.2 3B Instruct | `meta-llama/Llama-3.2-3B-Instruct` | OpenRouter |
 
@@ -103,4 +104,4 @@ Models served on Anthropic and OpenAI also have a deferred [batch tier](/api-ref
 
 - **Local models** (Ollama-style `name:tag` ids such as `qwen3:4b`, `llama3.1:8b`, `gpt-oss:20b`): the [decision endpoint](/api-reference/route) can route to them, but your app executes the call; the inference endpoint returns a clear `400` for them.
 - **Fine-tuned models** (your project's trained models, by name): same rule; the decision endpoint routes to them and your app serves them.
-- **Bring your own provider**: register a model id with your own base URL and key under **Cloud Inference** in the dashboard, and the inference endpoint executes that id on your endpoint instead — metered but never billed. This lifts the `400` for local and fine-tuned ids too.
+- **Bring your own provider**: register a model id with your own base URL and key under **Cloud Inference** in the dashboard, and the inference endpoint executes that id on your endpoint instead, metered but never billed. This lifts the `400` for local and fine-tuned ids too.

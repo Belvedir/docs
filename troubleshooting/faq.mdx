@@ -40,6 +40,10 @@ Yes, report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fa
 
 Only inference: routed calls through the router endpoints, calls you make in the dashboard Playground, and hosted inference sessions, per token at the rates on the platform's Pricing page (**Inference → Pricing**), drawn from the organization's credit balance. Tracing, segmentation, training runs, and benchmark runs are currently free.
 
+## How long is my data kept?
+
+Trace data has no automatic expiry: traces, sessions, and tasks stay until you delete them, and deleting a project removes all of its data. The one exception is batch inference: a batch's results are purged 29 days after it ends (its counts and spend remain), and you can delete a batch through the API to remove its results sooner. See [Data handling](/data-handling).
+
 ## Why did I get a 402 or 429?
 
 A `402` means the organization is out of credits (or the project has no organization); a `429` is the per-key rate limit. Both are covered in [Common Issues](/troubleshooting/common-issues), with the limits and the fixes.

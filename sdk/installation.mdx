@@ -12,7 +12,7 @@ The Belvedir Node SDK auto-instruments the major LLM providers with a single `in
 npm install belvedir
 ```
 
-Migrating from Fractal? The old packages (`@fractalresearch/loop`, `fractal-loop`) still work but are deprecated.
+Migrating from an older package name? On npm, `@fractalresearch/loop` and `@belvedir/loop` (0.2.0) are deprecated but still installable; on PyPI, `belvedir-loop` is frozen at 0.4.0. All of them are superseded by `belvedir`, which is where fixes land.
 
 Both SDKs run on macOS, Linux, and Windows with no native dependencies: the Node SDK is pure TypeScript (Node 18+), and the [Python SDK](/sdk/python) is pure Python (3.10+). For setting `BELVEDIR_API_KEY` per operating system, see [Environment variables](/guides/environment-variables).
 

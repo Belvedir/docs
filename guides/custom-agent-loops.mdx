@@ -4,16 +4,16 @@ sidebarTitle: "Custom agent loops"
 description: "Learn how to instrument a hand-rolled agent loop with Belvedir: inventory every LLM call site, know exactly what auto-instrumentation captures, and place sessions and tasks."
 ---
 
-You don't need a framework for Belvedir to trace an agent. A custom in-house loop — a `while` loop over model turns and tool dispatch — instruments the same way as any app: `initialize()` once, wrap each run in a `session`, optionally mark units of work with `task()`. What actually goes wrong in real integrations isn't the loop; it's coverage. Codebases of any age accumulate LLM call sites outside the main loop, and a missed one produces no error — just silently missing data.
+You don't need a framework for Belvedir to trace an agent. A custom in-house loop (a `while` loop over model turns and tool dispatch) instruments the same way as any app: `initialize()` once, wrap each run in a `session`, optionally mark units of work with `task()`. What actually goes wrong in real integrations isn't the loop; it's coverage. Codebases of any age accumulate LLM call sites outside the main loop, and a missed one produces no error, just silently missing data.
 
 ## Inventory every LLM call site first
 
 Before wiring anything, enumerate every place the codebase talks to a model. They are rarely all behind one shared client factory. Look for:
 
-- **Official SDK clients** (`openai`, `anthropic`, `@anthropic-ai/sdk`) — including ones pointed at another base URL (OpenRouter, vLLM, a proxy). These are auto-captured regardless of base URL: instrumentation patches the client, not the destination.
+- **Official SDK clients** (`openai`, `anthropic`, `@anthropic-ai/sdk`), including ones pointed at another base URL (OpenRouter, vLLM, a proxy). These are auto-captured regardless of base URL: instrumentation patches the client, not the destination.
 - **Raw HTTP calls** to `chat/completions` (common in agent frameworks and loops with their own HTTP layer).
 - **Side paths that skip the shared client**: a one-off titling or classification call, embeddings, provider batch-API usage, operator scripts and cron jobs.
-- **Background workers and queue consumers** — separate processes, each with its own `initialize()` requirement. See [Background workers](/guides/background-workers).
+- **Background workers and queue consumers**: separate processes, each with its own `initialize()` requirement. See [Background workers](/guides/background-workers).
 
 Quick greps that find most of them:
 
@@ -22,25 +22,27 @@ grep -rn "OpenAI(\|Anthropic(\|chat/completions\|/v1/messages" src/
 grep -rn "api.openai.com\|api.anthropic.com\|openrouter.ai\|embeddings" src/
 ```
 
-## What auto-instrumentation captures — and what it doesn't
+## What auto-instrumentation captures, and what it doesn't
 
 | Call style | Captured? |
 | --- | --- |
 | `openai` client SDK (any base URL: OpenAI, OpenRouter, vLLM, a proxy) | Yes |
 | `anthropic` client SDK | Yes |
 | Frameworks OpenLLMetry instruments (LangChain, LlamaIndex, ...) | Yes |
-| Raw HTTP `POST .../chat/completions` — Node `fetch`, Python `requests`/`httpx` | Yes (Node `belvedir@0.4.0+`, Python `belvedir==0.6.0+`), streamed responses included |
-| Raw HTTP to Anthropic's `/v1/messages` wire shape | **No** — use the `anthropic` client SDK for those call sites |
-| Raw HTTP to `/embeddings`, `/responses`, or other non-chat paths | **No** — the raw-HTTP layer watches only `chat/completions` |
-| Python `aiohttp` | **No** — use `httpx` or a client SDK |
+| Raw HTTP `POST .../chat/completions` (Node `fetch`, Python `requests`/`httpx`) | Yes (Node `belvedir@0.4.0+`, Python `belvedir==0.6.0+`), streamed responses included |
+| Raw HTTP to Anthropic's `/v1/messages` wire shape | **No**: use the `anthropic` client SDK for those call sites |
+| Raw HTTP to `/embeddings`, `/responses`, or other non-chat paths | **No**: the raw-HTTP layer watches only `chat/completions` |
+| Python `aiohttp` | **No**: use `httpx` or a client SDK |
 
-Two details worth knowing. The raw-HTTP layer skips requests made by the official OpenAI/Anthropic clients so nothing is captured twice — which also means a client-SDK call site has exactly one capture path: if `initialize()` didn't run before that client's library was patched into place, there is no HTTP-level fallback. And in Python there is no `instrumentModules`: auto-instrumentation always sees the installed packages, so init order is only about running `initialize()` before LLM calls are made.
+Two details worth knowing. The raw-HTTP layer skips requests made by the official OpenAI/Anthropic clients so nothing is captured twice, which also means a client-SDK call site has exactly one capture path: if `initialize()` didn't run before that client's library was imported, there is no HTTP-level fallback. And in Python there is no `instrumentModules`: auto-instrumentation always sees the installed packages, so init order is only about running `initialize()` before LLM calls are made.
 
 ## Place the session, then the tasks
 
-Open one `session` per agent run, at the loop's entry point, with an id that is stable for the whole run (your run id or conversation id). Everything inside — every model turn, every tool span — links under it. `task()` is optional and marks sharper task boundaries for segmentation:
+Open one `session` per agent run, at the loop's entry point, with an id that is stable for the whole run (your run id or conversation id). Everything inside (every model turn, every tool span) links under it. `task()` is optional and marks sharper task boundaries for segmentation:
 
 ```python
+import os
+
 import belvedir as loop
 
 loop.initialize(api_key=os.environ["BELVEDIR_API_KEY"], app_name="my-agent")
@@ -59,7 +61,7 @@ def run_agent(question: str, run_id: str, user_id: str) -> str:
     return response.choices[0].message.content
 ```
 
-The Node shape is identical with `withSession({ sessionId, userId }, fn)` and `task(name, fn)` — see [SDK configuration](/sdk/configuration).
+The Node shape is identical with `withSession({ sessionId, userId }, fn)` and `task(name, fn)`; see [SDK configuration](/sdk/configuration).
 
 Two session rules that bite custom loops specifically:
 
@@ -72,6 +74,6 @@ For a call style outside the table above (an unsupported HTTP client, a language
 
 ## Next steps
 
-- [Background workers](/guides/background-workers) — when the loop's work crosses a process, thread, or queue boundary.
-- [Model routing](/inference/mixture-of-models) — running the loop's inference through Belvedir.
-- [Common issues](/troubleshooting/common-issues) — the symptoms, if something above didn't take.
+- [Background workers](/guides/background-workers): when the loop's work crosses a process, thread, or queue boundary.
+- [Model routing](/inference/mixture-of-models): running the loop's inference through Belvedir.
+- [Common issues](/troubleshooting/common-issues): the symptoms, if something above didn't take.

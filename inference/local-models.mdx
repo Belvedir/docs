@@ -18,7 +18,7 @@ The app serves on `127.0.0.1:8080`, llama.cpp's standard port, adopting a llama-
 
 ## 2. Point your agent at the local endpoint
 
-Ollama exposes an OpenAI-compatible API, so your agent talks to it through the OpenAI SDK, which the Belvedir SDK already instruments:
+The local server exposes an OpenAI-compatible API, so your agent talks to it through the OpenAI SDK, which the Belvedir SDK already instruments. This example targets the app's default llama.cpp engine on `127.0.0.1:8080`; on the Ollama engine use `http://127.0.0.1:11434/v1` instead:
 
 ```ts
 import OpenAI from "openai";

@@ -7,14 +7,14 @@ description: "Send OpenTelemetry trace data to Belvedir as OTLP over HTTP (proto
 Receives OpenTelemetry trace data over OTLP/HTTP. This is called automatically by the SDK, and any stock OpenTelemetry exporter can target it too (see [Agents without the SDK](/guides/otel-agents)).
 
 - **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
-- **Body**: an OTLP `ExportTraceServiceRequest`, either JSON (`Content-Type: application/json`, a `resourceSpans` array) or protobuf (`Content-Type: application/x-protobuf`). `Content-Encoding: gzip` is accepted.
-- **Optional header** `x-belvedir-session-from: trace`: spans without a session id are assigned their trace id as the session, so exporters that never stamp sessions still segment into tasks.
+- **Body**: an OTLP `ExportTraceServiceRequest`, either JSON (`Content-Type: application/json`, a `resourceSpans` array) or protobuf (`Content-Type: application/x-protobuf` or `application/protobuf`). `Content-Encoding: gzip` is accepted.
+- **Optional header** `x-belvedir-session-from: trace`: spans without a session id are assigned their trace id as the session, so exporters that never stamp sessions still segment into tasks. Only traces that contain an LLM span **in that request** are promoted (housekeeping traces with no model call stay unsessioned rather than costing a segmentation call each). If an exporter splits one trace across export batches, only the batch carrying the LLM span is promoted; the rest of that trace's spans land without a session, so keep a trace's spans in one export where you can.
 
 Traces tagged with a session id (`withSession` in the SDK, or a `session.id` / `gen_ai.conversation.id` span attribute from other exporters) are grouped into sessions and segmented into tasks; untagged spans still land but can't be linked or segmented.
 
 ## Limits
 
-- Request body: 5 MB max.
-- Up to 1,000 spans and 200 distinct sessions per request.
+- Request body: 5 MB max (after gzip inflation). Larger bodies, and gzip bodies that fail to inflate under that ceiling, return `413`.
+- Up to 1,000 spans and 200 distinct sessions per request; over either returns `400` with a message naming the limit. Split into smaller batches.
 - Rate limit: 2 requests/second sustained per key with a burst of 120; over it returns `429` with a `Retry-After` header. The SDK's batching stays well under this.
 - A `402` means the project has no organization to bill to (trace ingestion itself is not billed today). Create or join an organization for the project.
