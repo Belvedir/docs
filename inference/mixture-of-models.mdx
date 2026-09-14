@@ -52,7 +52,7 @@ const model = route.configured ? route.model : "qwen3:4b"; // local fallback
 const res2 = await client.chat.completions.create({ model, messages });
 ```
 
-Every new project starts with a Default router: GLM 5.2 serves the bulk (Medium), clearly hard requests escalate to Claude Fable 5 (Big), and quick machine tasks take Qwen 3.5 9B (Small). A project created with **Chinese models** off gets a variant with Grok 4.6 as Medium and Llama 3.2 3B as Small instead. Unconfigured projects (older ones, or those whose routers were deleted) get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
+Every new project starts with a Default router: GLM 5.2 serves the bulk (Medium), clearly hard requests escalate to Claude Fable 5 (Big), and quick machine tasks take Qwen 3.5 9B (Small). A project created with **Chinese models** off gets a variant with Grok 4.6 as Medium and Llama 3.2 3B as Small instead. Unconfigured projects (older ones created before Default routers; the auto router can't be deleted, only replaced by making another router auto) get `configured: false` (never an error), so the call is safe to ship before the dashboard config exists. With `session_id` set, repeat calls in the same session return the first decision as `tier: "pinned"` for up to 24 hours; changing the routing config releases stale pins.
 
 ## Tune it from production data
 
