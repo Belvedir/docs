@@ -31,7 +31,7 @@ belvedir keys my-agent               # your API keys in a project
 belvedir conversations my-agent -n 50
 belvedir traces my-agent             # raw spans (name, model, status)
 belvedir tasks my-agent
-belvedir groups my-agent             # training sets
+belvedir groups my-agent             # task groups
 belvedir cleaning my-agent           # the cleaning log
 belvedir models [my-agent]           # fine-tuned models (all projects, or one)
 belvedir runs my-agent               # training + optimization runs
@@ -62,7 +62,7 @@ belvedir projects delete my-agent --yes
 belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
 belvedir train my-agent --method sft      # launch a LoRA training run (sft | opsd | rl)
-belvedir train my-agent --base meta-llama/Llama-3.1-8B-Instruct --group <group-id> --hf-token hf_...   # pick the base, one training set, and a token for gated bases
+belvedir train my-agent --base meta-llama/Llama-3.1-8B-Instruct --group <group-id> --hf-token hf_...   # pick the base, one task group, and a token for gated bases
 belvedir train my-agent --method rl --reward similarity --algorithm auto
 belvedir train cancel <run-id>
 belvedir analyze my-agent                 # queue an optimization run
@@ -88,7 +88,7 @@ belvedir environments simulate my-agent --group <group-id>
 belvedir environments declare my-agent --name "Refund requests" --description "Customer asks for a refund..."
 belvedir signals my-agent                 # error/slow/frustration scan
 belvedir validation my-agent              # success rates + shipped deltas
-belvedir routing stats my-agent           # per-training-set model records + recommendation
+belvedir routing stats my-agent           # per-task-group model records + recommendation
 belvedir simulations run <simulation-id> --episodes 8 [--model <litellm-id>]   # the model that plays the agent
 belvedir harness map my-agent you/agent   # map a connected repo's harness
 belvedir repos add my-agent you/agent     # project repository access (repos remove to drop it)

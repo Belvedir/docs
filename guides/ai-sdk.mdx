@@ -69,7 +69,7 @@ await withSession({ sessionId: chatId, userId: user.id }, async () => {
 await flush(); // serverless: flush before the function returns
 ```
 
-Spans arrive with the session id, model, prompt, completion, and token counts, for streamed and unstreamed calls alike. Tasks, training sets, and [outcome reporting](/api-reference/outcomes) work exactly as with any other client.
+Spans arrive with the session id, model, prompt, completion, and token counts, for streamed and unstreamed calls alike. Tasks, task groups, and [outcome reporting](/api-reference/outcomes) work exactly as with any other client.
 
 ## Pitfall: native providers produce no LLM spans
 

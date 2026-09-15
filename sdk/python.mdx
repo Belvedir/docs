@@ -30,7 +30,7 @@ On `belvedir>=0.6.0`, raw `requests` / `httpx` calls to OpenAI-compatible endpoi
 
 ## 3. Wrap agent work in sessions
 
-Same as the Node SDK: `session` links every span under one session id (required for tasks and training sets), and `task()` optionally marks task boundaries. Both are context managers, they work inside `async def` bodies, and `session` also accepts a `metadata` dict. `with_session` is an alias of `session`:
+Same as the Node SDK: `session` links every span under one session id (required for tasks and task groups), and `task()` optionally marks task boundaries. Both are context managers, they work inside `async def` bodies, and `session` also accepts a `metadata` dict. `with_session` is an alias of `session`:
 
 ```python
 with loop.session(session_id=chat_id, user_id=user.id):

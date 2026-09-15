@@ -66,13 +66,13 @@ Serverless functions (Vercel, Lambda, Cloud Functions) can freeze or exit as soo
 
 Two separate causes. `initialize()` is per process: a queue worker, forked child, or subprocess never inherits the parent's initialization, so its spans are never exported, and `flush()` in that process silently no-ops rather than erroring. Call `initialize()` at each worker process's startup (after the fork, for prefork servers). Separately, the session context is carried in the process's execution context: it follows `await`, but never crosses a thread, process, or queue boundary, so LLM calls inside a Celery task, Temporal activity, or thread pool arrive session-less even when the job was enqueued inside `session()`. Pass the session id in the job's payload and re-open `session(session_id=...)` inside the worker; spans under the same id merge into one session. The [Background workers guide](/guides/background-workers) covers the full pattern.
 
-## Traces show up but no tasks or training sets
+## Traces show up but no tasks or task groups
 
-Tasks and training sets only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
+Tasks and task groups only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
 
 ## `withSession("id", fn)` produced traces with no session (Node, before 0.3.1)
 
-Versions of the Node SDK before `belvedir@0.3.1` only read the object form, `withSession({ sessionId }, fn)`. Passing a bare string was silently ignored: spans arrived with no session id, so no tasks or training sets formed and `reportOutcome` for that id returned false (the platform answered 404). Since 0.3.1 both forms work, and a call with no session id logs a warning instead of failing silently. Run `npm install belvedir@latest`, or pass `{ sessionId }` if you must stay pinned.
+Versions of the Node SDK before `belvedir@0.3.1` only read the object form, `withSession({ sessionId }, fn)`. Passing a bare string was silently ignored: spans arrived with no session id, so no tasks or task groups formed and `reportOutcome` for that id returned false (the platform answered 404). Since 0.3.1 both forms work, and a call with no session id logs a warning instead of failing silently. Run `npm install belvedir@latest`, or pass `{ sessionId }` if you must stay pinned.
 
 ## `reportOutcome` returns false (or `POST /api/v1/outcomes` returns 404)
 

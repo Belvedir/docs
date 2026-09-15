@@ -13,7 +13,7 @@ The platform repo (`Belvedir/belvedir-platform`) is the source of truth for prod
 - API keys start with `bv_live_`; legacy `fr_live_` keys remain valid.
 - Env vars are `BELVEDIR_*` (`BELVEDIR_API_KEY`, `BELVEDIR_BASE_URL`, `BELVEDIR_RUN_ID`, `BELVEDIR_TASKS_FILE`); legacy `FRACTAL_*` names are set as aliases in benchmark sandboxes only.
 - The ingest default is `https://platform.belvedir.ai`; `platform.fractalresearch.ai` is RETIRED (spans sent there are dropped); see the Common Issues entry.
-- Task clusters are **training sets** in all user-facing copy (never "clusters", and no longer "Groups": renamed Aug 10, 2026; the nav page is **Training Sets**). API tokens keep the old name and are contract, not copy: `tier: "group"`, `tier: "group-record"`, `matched_group`, `x-belvedir-group`. Never rewrite those.
+- Task clusters are **task groups** in all user-facing copy (never "clusters", never "training sets", and not "Groups": Groups → Training Sets Aug 10, 2026 → Task Groups Sept 15, 2026; the nav page is **Task Groups**, and "task group" is lowercase in running text). API tokens keep the old name and are contract, not copy: `tier: "group"`, `tier: "group-record"`, `matched_group`, `x-belvedir-group`. Never rewrite those.
 - Curation is the **Cleaning log**; projects are **Projects** (never "instances").
 - Loop types: **Harness evolution** (whole-repo GEPA), **Prompt evolution** (scaffolding-only GEPA), **LoRA finetuning**. "Memory harness" and version-style loop names ("loop 0.1.0") are retired. NOTE the historical swap: "Prompt evolution" used to mean the whole-repo loop; today it means the scaffolding-constrained one.
 - Autonomy (review vs Auto-PR) is chosen **per loop** in the Training setup wizard; there is no project-wide autonomy switch.
