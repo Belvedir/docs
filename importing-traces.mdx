@@ -10,6 +10,8 @@ Already tracing with another observability platform? Import that history instead
 
 **Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick (credentials are used for that import only, never stored; self-hosted deployments need a public https URL). Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically.
 
+Langfuse imports read the v2 observations API, so they keep working on Langfuse Cloud after the v3 read endpoints are removed on November 16, 2026, and on self-hosted Langfuse v4. Older self-hosted deployments without the v2 API are read through the legacy endpoints automatically.
+
 ## 2. Or from the shell
 
 Lists nothing, imports the 20 most recent conversations. Pass `--list` first to see what would be imported (both importers also take `--base-url` when your traces should go to a platform host other than the default `https://platform.belvedir.ai`):
