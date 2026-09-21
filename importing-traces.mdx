@@ -8,7 +8,7 @@ Already tracing with another observability platform? Import that history instead
 
 ## 1. From the dashboard
 
-**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick (credentials are used for that import only, never stored; self-hosted deployments need a public https URL). Imported conversations are labeled with the provider's name ("LangSmith", "PostHog", and so on) rather than an API key: pick that label in the API key filter on the Data pages, or as a data source in the training wizard, to work with just the imported data. No API key is created for the import. Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically. File uploads attribute to a project API key you pick or create in the wizard.
+**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick (credentials are used for that import only, never stored; self-hosted deployments need a public https URL). Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically. Imported conversations are labeled by source ("LangSmith", "PostHog", "File import", and so on) rather than by an API key: pick that label in the API key filter on the Data pages, or as a data source in the training wizard, to work with just the imported data. No API key is created for an import.
 
 Langfuse imports read the v2 observations API, so they keep working on Langfuse Cloud after the v3 read endpoints are removed on November 16, 2026, and on self-hosted Langfuse v4. Older self-hosted deployments without the v2 API are read through the legacy endpoints automatically.
 
@@ -57,7 +57,7 @@ imp.import_conversations(
 
 ## What to expect
 
-Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard provider imports carry the provider label instead). LLM runs keep their full message history, tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
+Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history, tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
 
 <Warning>
 Re-importing the same conversation duplicates its spans, so import once.
