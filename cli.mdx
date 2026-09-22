@@ -76,7 +76,7 @@ belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
 belvedir benchmarks run <harness-id> --model <trained-model-id> [--hf-token hf_...]   # GPU eval of a fine-tune (token for gated bases)
 belvedir benchmarks cancel <run-id>
 belvedir benchmarks delete <harness-id> --yes
-belvedir environments generate my-agent --group <group-id>   # the deployment's default driver (Belvedir Runner, on Harbor where it hosts Harbor)
+belvedir environments generate my-agent --group <group-id>   # the deployment's default driver (Belvedir Runner, on Harbor where it hosts Harbor); omitting --preset needs @belvedir/cli 0.4.1+
 belvedir environments generate my-agent --group <group-id> --preset harbor-runner   # force Harbor (one container per task; your Modal tokens via --env unless managed)
 belvedir environments generate my-agent --group <group-id> --preset belvedir   # force the in-sandbox runner (no Modal needed)
 belvedir environments export my-agent --id <environment-id> --out ./env [--limit 3]   # Harbor dataset: harbor run -p ./env
