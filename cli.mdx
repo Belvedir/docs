@@ -106,7 +106,7 @@ belvedir routing promote <router-id>      # switch which router serves traffic
 belvedir orgs create "my team"
 belvedir orgs rename my-org "my team v2"  # owner only
 belvedir orgs delete my-org --yes         # empty orgs only, owner only
-belvedir members invite my-org teammate@example.com [--role member|admin]
+belvedir members invite my-org teammate@example.com [--role member|admin]   # owner or admin, either role
 belvedir members remove my-org <user-id>  # your own id = leave
 belvedir members role my-org <user-id> admin|member   # owner only
 belvedir access set my-agent <user-id> off
