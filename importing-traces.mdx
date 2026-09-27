@@ -62,3 +62,5 @@ Imported traffic from the shell or Python is attributed to the API key you pass,
 <Warning>
 Re-importing the same conversation duplicates its spans, so import once.
 </Warning>
+
+Dashboard imports have a few bounds: each call to the source is given 20 seconds and 16 MB (a slow or oversized response fails that conversation with a clear message and the import moves on), an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). If the runner is interrupted mid-conversation, that conversation may be missing rather than imported twice: check the per-conversation failures and counts at the top of Import Data.

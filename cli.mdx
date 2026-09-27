@@ -12,7 +12,7 @@ belvedir login          # opens your browser (Google sign-in)
 belvedir projects
 ```
 
-`belvedir login` opens the Belvedir dashboard, where you're usually already signed in: click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json`, refreshes automatically, and `belvedir logout` forgets it.
+`belvedir login` opens the Belvedir dashboard, where you're usually already signed in: click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json` (owner-only permissions), refreshes automatically, and `belvedir logout` revokes it on the server — only that session; your browser and other terminals stay signed in — then deletes the file. Offline, it still signs you out locally and the server session expires on its own.
 
 ## Operating systems
 
@@ -91,7 +91,7 @@ belvedir environments declare my-agent --name "Refund requests" --description "C
 belvedir signals my-agent                 # error/slow/frustration scan
 belvedir validation my-agent              # success rates + shipped deltas
 belvedir routing stats my-agent           # per-task-group model records + recommendation
-belvedir simulations run <simulation-id> --episodes 8 [--model <litellm-id>]   # the model that plays the agent
+belvedir simulations run <simulation-id> --episodes 8 [--model <model-id>]   # the model that plays the agent: a priced Claude, Grok or Sail-served model, or an openrouter/… id
 belvedir harness map my-agent you/agent   # map a connected repo's harness
 belvedir repos add my-agent you/agent     # project repository access (repos remove to drop it)
 belvedir models download <model-id>       # signed adapter URL
@@ -120,7 +120,7 @@ Training and benchmark runs are currently free (only inference bills, exactly li
 
 ## Using with coding agents
 
-If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching paid runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly. Prefer a member account with project exclusions over the org owner's account for agent machines, and never approve a `cli-auth` link you didn't initiate: the approve page shows a verification code that must match the one your terminal printed.
+If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching paid runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly — or pastes the token into a browser: the dashboard refuses every write from a read-only session too. `belvedir logout` is the one write a read-only session can make. Prefer a member account with project exclusions over the org owner's account for agent machines, and never approve a `cli-auth` link you didn't initiate: the approve page shows a verification code that must match the one your terminal printed.
 
 ## Notes
 

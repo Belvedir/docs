@@ -10,7 +10,7 @@ Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `
 
 ## Ingest or the router returns 402 or 429
 
-Neither is a code bug. A `402` from the router means the organization's credit balance is used up: buy credits on **Organization Settings → Billing**, or turn on **Auto reload** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (run past zero, charged hourly) is enabled per organization on request via **Speak to sales** on the Billing page. A `402` from trace ingest means the project has no organization to bill to; trace ingestion itself is not billed today. A `429` is the per-key rate limit: ingest allows 2 requests/second sustained with a burst of 120, the router 25 requests/second with a burst of 300 (adjustable per organization); back off for the `Retry-After` seconds and retry.
+Neither is a code bug. A `402` from the router means the organization's credit balance is used up: buy credits on **Organization Settings → Billing**, or turn on **Auto reload** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (run past zero, charged hourly) is enabled per organization on request via **Speak to sales** on the Billing page. A `402` from trace ingest means the project has no organization to bill to; trace ingestion itself is not billed today. A `429` is the per-key rate limit: ingest and outcome reports allow 2 requests/second sustained with a burst of 120, ingest additionally 20 new sessions/second with a burst of 2,000 (an exporter that stamps a fresh session id on every span trips that one), the router 25 requests/second with a burst of 300 (adjustable per organization); back off for the `Retry-After` seconds and retry.
 
 ## `initialize() failed` warning mentioning `parseKeyPairsIntoRecord` (Node)
 
@@ -77,6 +77,10 @@ Versions of the Node SDK before `belvedir@0.3.1` only read the object form, `wit
 ## `reportOutcome` returns false (or `POST /api/v1/outcomes` returns 404)
 
 The session hasn't been ingested yet: outcomes can only attach to sessions the platform has seen. Call `flush()` first so the spans arrive, then retry, or report later from a webhook or job.
+
+## Node process died at startup: unhandled rejection mentioning `api.traceloop.com`
+
+The underlying Traceloop SDK's "sync" feature (prompt-config fetching from Traceloop's servers) defaults on, and a network failure there rejects an unhandled promise, which Node treats as fatal. `belvedir` versions after 0.4.1 turn it off inside `initialize()`; on 0.4.1 or earlier set `TRACELOOP_SYNC_ENABLED=false` in the environment. Belvedir never uses that feature and no data goes to Traceloop either way.
 
 ## Traces missing in development
 

@@ -46,6 +46,7 @@ Traffic flows app → Belvedir router → your gateway → provider. Belvedir pi
 ### Notes
 
 - Routed model ids are sent to the gateway in their public spellings, so keep your routers on `provider/model` slugs the gateway serves (`openai/gpt-5.2`, `anthropic/claude-sonnet-5`). A model the gateway doesn't recognize fails with the gateway's error.
+- The gateway base URL must be `https`, resolve to a public address, and not be one of Belvedir's own hosts (the router would be calling itself). Belvedir never follows a redirect from the gateway: a `3xx` answer fails the call with `502` (`gateway_redirect`), so enter the final URL (`https://ai-gateway.vercel.sh/v1`, not a shortener or a host that forwards to it).
 - A per-model endpoint registered on the Cloud Inference page wins over the default gateway for that model. Fine-tuned and local models never fall through to the gateway; register them individually if your gateway serves them.
 - The default gateway applies to routed chat completions. The Anthropic-native Messages passthrough (`/api/v1/messages`) and the embeddings endpoint still execute on their built-in providers.
 - Spend that doesn't pass through the gateway won't appear in Vercel. If completeness matters, route all inference through Belvedir and check the usage pages agree.

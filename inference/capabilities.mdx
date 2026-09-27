@@ -51,6 +51,8 @@ Each of these fails fast with a clear error rather than an opaque upstream failu
 - **OpenAI's Responses API**: the router speaks chat completions only, so OpenAI's pro and codex families return `400` naming the base chat model to use instead.
 - **Anthropic Managed Agents / Agent API sessions** run their inference inside Anthropic's own orchestration; there is no base URL to override, for Belvedir or anyone else. Instrument those workloads with the Belvedir SDK for observability instead.
 - **No routing on the Messages passthrough or in batches**: both surfaces are model-pinned; `"auto"` returns `400`. Routing lives on the chat-completions endpoint.
+- **Anthropic server tools: web search and web fetch only, on the Messages passthrough only.** `web_search_*` and `web_fetch_*` pass through `POST /api/v1/messages` and are metered from `usage.server_tool_use` (1 cent per web search plus tokens; web fetch free beyond tokens). Code execution, computer use, text editor / bash / memory / tool search, the MCP connector (`mcp_servers`) and containers bill outside the usage Belvedir meters, so requests carrying them return `400`. Native batch `params` refuse every server tool. Custom tools (name + `input_schema`) work everywhere.
+- **No redirects from your gateway**: a registered endpoint or default gateway that answers `3xx` returns `502` (`gateway_redirect`) instead of being followed; register the final host. Base URLs must be `https`, public, and not Belvedir's own hosts.
 - **Unpriced models on Anthropic, OpenAI, or Sail** return `400` (OpenRouter and xAI ids are exempt: both report the exact cost per call, so they bill correctly).
 - **No batch tier for OpenRouter-served models**, and no batches for the Sail models without a flex window (DeepSeek V4 Flash, gpt-oss 120B, the NVFP4 Gemma variant).
 - **No streaming inside batches**, and Anthropic-native `params` bodies are not accepted for OpenAI models.
@@ -83,7 +85,7 @@ The first attempt is still metered on the first two: you pay for what the provid
 | Live call duration | 5 minutes end to end; stream long generations |
 | Batch size | 100,000 requests per batch (Anthropic cap; 50,000 OpenAI; the Sail portion caps at 1,000 requests and ~2 MB serialized) |
 | Batch `custom_id` | 1–64 characters, unique per batch |
-| Batch `idempotency_key` | Up to 128 characters, unique per project |
+| Batch `idempotency_key` | Up to 128 characters, unique per project (Anthropic SDK facade: the `Idempotency-Key` header, up to 255 characters of `A-Z a-z 0-9 _ . : -`) |
 | Session pin lifetime | 24 hours |
 
 Beyond the rate limits the endpoints return `429`; retry after a short backoff. When shared batch capacity is momentarily full, submission returns a retryable `503` with `Retry-After`.
