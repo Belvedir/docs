@@ -57,10 +57,10 @@ imp.import_conversations(
 
 ## What to expect
 
-Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history, tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
+Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history — LangChain message encodings and raw OpenAI chat completions (`choices`, what LangSmith's `wrap_openai` stores) both count, and an assistant turn that only calls tools is kept as `[tool_call] name(arguments)` rather than dropped — tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
 
 <Warning>
 Re-importing the same conversation duplicates its spans, so import once.
 </Warning>
 
-Dashboard imports have a few bounds: each call to the source is given 20 seconds and 16 MB (a slow or oversized response fails that conversation with a clear message and the import moves on), an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). If the runner is interrupted mid-conversation, that conversation may be missing rather than imported twice: check the per-conversation failures and counts at the top of Import Data.
+Dashboard imports have a few bounds: each call to the source is given 20 seconds and 16 MB (a slow or oversized response fails that conversation with a clear message and the import moves on), a rate-limited or briefly unavailable source (HTTP 429, 502–504) is retried up to three times with backoff before the conversation is marked failed, an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). If the runner is interrupted mid-conversation, that conversation may be missing rather than imported twice: check the per-conversation failures and counts at the top of Import Data.
