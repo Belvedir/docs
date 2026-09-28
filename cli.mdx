@@ -58,7 +58,7 @@ Projects are referenced by UUID or by name when it's unambiguous. Every read tak
 ```bash
 belvedir projects create my-agent [--org <org-id>]
 belvedir projects rename my-agent "my agent v2"
-belvedir projects delete my-agent --yes
+belvedir projects delete my-agent --yes   # org owner only
 belvedir keys revoke <key-id>
 belvedir keys rename <key-id> production
 belvedir train my-agent --method sft      # launch a LoRA training run (sft | opsd | rl)
@@ -104,11 +104,11 @@ belvedir routing unpin my-agent <group-id>
 belvedir routing routers my-agent         # all routers: auto + drafts
 belvedir routing promote <router-id>      # switch which router serves traffic
 belvedir orgs create "my team"
-belvedir orgs rename my-org "my team v2"  # owner only
+belvedir orgs rename my-org "my team v2"  # owner or admin
 belvedir orgs delete my-org --yes         # empty orgs only, owner only
 belvedir members invite my-org teammate@example.com [--role member|admin]   # owner or admin, either role
-belvedir members remove my-org <user-id>  # your own id = leave
-belvedir members role my-org <user-id> admin|member   # owner only
+belvedir members remove my-org <user-id>  # owner or admin (not the owner); your own id = leave
+belvedir members role my-org <user-id> admin|member   # owner or admin; the owner's role can't change
 belvedir access set my-agent <user-id> off
 belvedir outcome my-agent <session-id> fail
 belvedir billing buy my-org --amount 20   # opens Stripe Checkout
