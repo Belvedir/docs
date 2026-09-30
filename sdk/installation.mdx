@@ -12,13 +12,13 @@ The Belvedir Node SDK auto-instruments the major LLM providers with a single `in
 npm install belvedir
 ```
 
-Migrating from an older package name? On npm, `@fractalresearch/loop` and `@belvedir/loop` (0.2.0) are deprecated but still installable; on PyPI, `belvedir-loop` is frozen at 0.4.0. All of them are superseded by `belvedir`, which is where fixes land.
+Coming from `@fractalresearch/loop`, `@belvedir/loop`, or `belvedir-loop`? See [Migrating from Fractal](/migrating-from-fractal).
 
-Both SDKs run on macOS, Linux, and Windows with no native dependencies: the Node SDK is pure TypeScript (Node 18+), and the [Python SDK](/sdk/python) is pure Python (3.10+). For setting `BELVEDIR_API_KEY` per operating system, see [Environment variables](/guides/environment-variables).
+Both SDKs run on macOS, Linux, and Windows with no native dependencies. The Node SDK is pure TypeScript and needs Node 18 or later; the [Python SDK](/sdk/python) is pure Python and needs 3.10 or later. For setting `BELVEDIR_API_KEY` per operating system, see [Environment variables](/guides/environment-variables).
 
-## Initialize
+## Initialize before importing your LLM SDK
 
-The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js use `instrumentation.ts` at the project root; see the [Next.js guide](/guides/nextjs). In a plain CommonJS Node process, call it at the top of your entry file:
+The SDK patches your LLM client the moment `initialize()` runs, so `initialize()` must run **before the LLM SDK is imported**. Call it once at process start. In a plain CommonJS Node process, that is the top of your entry file:
 
 ```ts
 import { initialize } from "belvedir";
@@ -31,10 +31,28 @@ initialize({
 // import OpenAI/Anthropic *after* initialize()
 ```
 
-In an ESM entry point (`.mjs`, or `"type": "module"` in `package.json`), **always pass your LLM SDKs via `instrumentModules`**: static imports hoist above the `initialize()` call and dynamic `import()` bypasses the require hook, so auto-instrumentation produces no LLM spans there, with no warning. The same applies to bundled environments. See [Configuration](/sdk/configuration).
+Never call `initialize()` from inside a route or handler file: by then the LLM SDK is already imported and the patch won't take. In Next.js, the only place guaranteed to run first is `instrumentation.ts` at your project root; see the [Next.js guide](/guides/nextjs).
+
+## ESM and bundled code: pass `instrumentModules`
+
+In an ESM entry point (`.mjs`, or `"type": "module"` in `package.json`) and in any bundled environment (Next.js, webpack, esbuild), **always pass your LLM SDKs via `instrumentModules`**. Static imports hoist above the `initialize()` call and dynamic `import()` bypasses the require hook, so auto-instrumentation produces no LLM spans there, with no warning. Pass only the SDKs you actually use; either the SDK class or the module namespace is accepted:
+
+```ts
+import { initialize } from "belvedir";
+import OpenAI from "openai";
+import * as anthropic from "@anthropic-ai/sdk";
+
+initialize({
+  apiKey: process.env.BELVEDIR_API_KEY!,
+  appName: "my-agent",
+  instrumentModules: { openAI: OpenAI, anthropic },
+});
+```
+
+In Next.js, also keep the LLM SDKs and `belvedir` itself out of your bundles with `serverExternalPackages`, so every bundle shares one runtime copy; see [Keep LLM SDKs external](/guides/nextjs#keep-llm-sdks-external).
 
 ## Next steps
 
 - [Configuration](/sdk/configuration): every option accepted by `initialize()`, and the full SDK API.
-- [Providers](/sdk/supported-providers): every LLM provider we auto-instrument.
+- [Providers](/sdk/supported-providers): every LLM provider Belvedir auto-instruments.
 - [Python SDK](/sdk/python): same concepts, snake\_case, context managers.

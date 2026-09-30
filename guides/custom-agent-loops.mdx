@@ -28,25 +28,21 @@ grep -rn "api.openai.com\|api.anthropic.com\|openrouter.ai\|embeddings" src/
 | --- | --- |
 | `openai` client SDK (any base URL: OpenAI, OpenRouter, vLLM, a proxy) | Yes |
 | `anthropic` client SDK | Yes |
-| Frameworks OpenLLMetry instruments (LangChain, LlamaIndex, ...) | Yes |
-| Raw HTTP `POST .../chat/completions` (Node `fetch`, Python `requests`/`httpx`) | Yes (Node `belvedir@0.4.0+`, Python `belvedir==0.6.0+`), streamed responses included |
+| Frameworks Belvedir auto-instruments (LangChain, LlamaIndex, ...; see [Providers](/sdk/supported-providers)) | Yes |
+| Raw HTTP `POST .../chat/completions` (Node `fetch`, Python `requests`/`httpx`) | Yes, streamed responses included\* |
 | Raw HTTP to Anthropic's `/v1/messages` wire shape | **No**: use the `anthropic` client SDK for those call sites |
 | Raw HTTP to `/embeddings`, `/responses`, or other non-chat paths | **No**: the raw-HTTP layer watches only `chat/completions` |
 | Python `aiohttp` | **No**: use `httpx` or a client SDK |
 
-Two details worth knowing. The raw-HTTP layer skips requests made by the official OpenAI/Anthropic clients so nothing is captured twice, which also means a client-SDK call site has exactly one capture path: if `initialize()` didn't run before that client's library was imported, there is no HTTP-level fallback. And in Python there is no `instrumentModules`: auto-instrumentation always sees the installed packages, so init order is only about running `initialize()` before LLM calls are made.
+\* Requires `belvedir>=0.4.0` on npm or `belvedir>=0.6.0` on PyPI.
+
+Two details worth knowing. The raw-HTTP layer skips requests made by the official OpenAI/Anthropic clients so nothing is captured twice, which also means a client-SDK call site has exactly one capture path: if `initialize()` didn't run before that client's library was imported, there is no HTTP-level fallback ([init-order rule](/sdk/installation)). And in Python there is no `instrumentModules`: auto-instrumentation always sees the installed packages, so init order is only about running `initialize()` before LLM calls are made.
 
 ## Place the session, then the tasks
 
-Open one `session` per agent run, at the loop's entry point, with an id that is stable for the whole run (your run id or conversation id). Everything inside (every model turn, every tool span) links under it. `task()` is optional and marks sharper task boundaries for segmentation:
+Open one `session` per agent run, at the loop's entry point, with an id that is stable for the whole run (your run id or conversation id). Everything inside (every model turn, every tool span) links under it. `task()` is optional and marks sharper task boundaries:
 
 ```python
-import os
-
-import belvedir as loop
-
-loop.initialize(api_key=os.environ["BELVEDIR_API_KEY"], app_name="my-agent")
-
 def run_agent(question: str, run_id: str, user_id: str) -> str:
     with loop.session(session_id=run_id, user_id=user_id):
         for turn in range(MAX_TURNS):
@@ -61,7 +57,7 @@ def run_agent(question: str, run_id: str, user_id: str) -> str:
     return response.choices[0].message.content
 ```
 
-The Node shape is identical with `withSession({ sessionId, userId }, fn)` and `task(name, fn)`; see [SDK configuration](/sdk/configuration).
+`initialize()` runs once at process start, as in the [Python quickstart](/sdk/python). The Node shape is identical with `withSession({ sessionId, userId }, fn)` and `task(name, fn)`; see [SDK configuration](/sdk/configuration).
 
 Two session rules that bite custom loops specifically:
 

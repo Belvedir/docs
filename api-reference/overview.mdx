@@ -1,14 +1,29 @@
 ---
-title: "Belvedir REST API Reference: Traces, Outcomes, and Routing"
+title: "Belvedir REST API Reference: Inference, Traces, and Outcomes"
 sidebarTitle: "Overview"
-description: "Explore the Belvedir REST API: ingest OpenTelemetry traces, report ground-truth outcomes, ask for routing decisions, and authenticate requests."
+description: "The Belvedir REST API: run inference through an OpenAI-compatible or Anthropic-native endpoint, submit batches, ingest OpenTelemetry traces, report ground-truth outcomes, and authenticate requests."
 ---
 
-The Belvedir REST API accepts OpenTelemetry trace data as OTLP over HTTP, in JSON or protobuf. The SDK calls it automatically; you rarely need to hit it directly.
+The Belvedir REST API has two halves. The **inference** endpoints run your LLM calls: point an OpenAI-compatible or Anthropic client at Belvedir with your Belvedir key and each call is routed, metered and billed per token. The **tracing** endpoints receive OpenTelemetry spans and ground-truth outcomes; the SDK calls those for you, and any stock OpenTelemetry exporter can target them too.
 
 - **Base URL**: `https://platform.belvedir.ai`
 - **Authentication**: API key via `Authorization: Bearer` or `x-api-key` header. See [Authentication](/api-reference/authentication).
-- **Endpoints**:
-  - Tracing: [`POST /api/v1/traces`](/api-reference/traces), [`POST /api/v1/outcomes`](/api-reference/outcomes)
-  - Inference: [`POST /api/v1/route/chat/completions`](/api-reference/route) (OpenAI-compatible), [`POST /api/v1/messages`](/api-reference/route) (Anthropic-native passthrough), [`POST /api/v1/route/embeddings`](/api-reference/route), and [`POST /api/v1/route`](/api-reference/route) for a routing decision without execution
-  - Batches: [`/api/v1/route/batches`](/api-reference/route) (`POST` to create, `GET` to list the project's recent batches, plus per-batch status, results, cancel, and uploads) and the Anthropic-SDK-compatible facade at `/api/v1/messages/batches` (create, list, retrieve, results, cancel, and `DELETE /api/v1/messages/batches/{id}` to remove an ended batch and its stored results)
+
+## Inference
+
+| Endpoint | What it does |
+| --- | --- |
+| [`POST /api/v1/route/chat/completions`](/api-reference/chat-completions) | OpenAI-compatible chat completions, routed or anchored on the model your code names |
+| [`POST /api/v1/messages`](/api-reference/messages) | The Anthropic Messages API, passed through untranslated |
+| [`POST /api/v1/route/embeddings`](/api-reference/embeddings) | OpenAI-compatible embeddings |
+| [`/api/v1/route/batches`](/api-reference/batches) | Batch inference: create, list, status, results, cancel, and `/uploads` for large submissions; the Anthropic SDK facade at `/api/v1/messages/batches` is on the same page |
+| [`POST /api/v1/route`](/api-reference/route) | A routing decision without execution, for calls your own code runs |
+
+To get started, point your existing client at Belvedir: [Route your calls](/inference/route-your-calls).
+
+## Tracing
+
+| Endpoint | What it does |
+| --- | --- |
+| [`POST /api/v1/traces`](/api-reference/traces) | Ingest OpenTelemetry spans as OTLP over HTTP (JSON or protobuf) |
+| [`POST /api/v1/outcomes`](/api-reference/outcomes) | Report whether a session actually worked, from a signal only your app has |

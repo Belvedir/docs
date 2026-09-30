@@ -1,0 +1,42 @@
+---
+title: "Migrating from Fractal"
+sidebarTitle: "Migrating from Fractal"
+description: "Belvedir was called Fractal until July 2026. Everything you need to move an older integration onto the current packages, keys, and hosts."
+---
+
+Belvedir was called Fractal until July 2026. Older packages, keys, and environment variables keep working, but new work should use the Belvedir names. This page collects every legacy detail so the rest of the docs can describe the current product only.
+
+## Packages
+
+| Old | Status | Use instead |
+|---|---|---|
+| npm `@fractalresearch/loop` | Deprecated, still installs | `npm install belvedir` |
+| npm `@belvedir/loop` (0.2.0) | Deprecated, still installs | `npm install belvedir` |
+| PyPI `fractal-loop` | Deprecated | `pip install belvedir` |
+| PyPI `belvedir-loop` | Frozen at 0.4.0 | `pip install belvedir` (import `belvedir`) |
+
+The API is the same in every package: `initialize`, `withSession` / `session`, `task`, `flush`, and `reportOutcome`. Change the import and reinstall.
+
+## API keys and environment variables
+
+- New keys start with `bv_live_`. Keys starting with `fr_live_` remain valid; you do not need to rotate them.
+- Environment variables are `BELVEDIR_*` (`BELVEDIR_API_KEY`, `BELVEDIR_BASE_URL`). The `FRACTAL_*` names are read as aliases inside benchmark sandboxes only; set the `BELVEDIR_*` names everywhere else.
+
+## The retired ingest host
+
+`platform.fractalresearch.ai` is retired. Spans sent there are dropped without an error. The current host is `https://platform.belvedir.ai`, which every `belvedir` release uses by default.
+
+Node `@fractalresearch/loop` before 0.1.5 defaults to the retired host. Upgrade to `belvedir`, or pass `baseUrl: "https://platform.belvedir.ai"` to `initialize()` until you do.
+
+## Old SDK versions
+
+Upgrade to the latest `belvedir` and these go away:
+
+- **`initialize() failed` mentioning `parseKeyPairsIntoRecord`** (Node 0.3.1): a dependency conflict. Fixed in 0.3.2.
+- **`withSession("id", fn)` had no effect** (Node before 0.3.1): the string form was ignored, so spans arrived without a session and no tasks formed. Pass `{ sessionId }` on old versions.
+- **A streamed final assistant reply is missing** (Node before 0.4.0, Python before 0.6.0): raw HTTP calls with `stream: true` were not recorded. Newer releases record streamed completions.
+- **Startup crash with an unhandled rejection mentioning `api.traceloop.com`** (Node 0.4.1 and earlier): set `TRACELOOP_SYNC_ENABLED=false` before initializing. Later releases disable it for you.
+
+## Importers
+
+The Python importers moved with the package. The old `belvedir_loop.importers.*` import paths still resolve, but new code should import from `belvedir.importers`.

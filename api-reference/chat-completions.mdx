@@ -1,0 +1,100 @@
+---
+title: "POST /api/v1/route/chat/completions: OpenAI-Compatible Inference"
+sidebarTitle: "POST /route/chat/completions"
+description: "Run chat completions through Belvedir with any OpenAI client: routed or anchored on the model your code names, streamed or not, with per-call cost on every response."
+---
+
+The routing decision, executed. This endpoint is OpenAI-compatible: point any OpenAI client at `baseURL: https://platform.belvedir.ai/api/v1/route` with your `bv_live_` key and `chat.completions.create` lands here. Belvedir picks the model, runs the call, and returns the provider's response unchanged. The two-line client change is on [Route your calls](/inference/route-your-calls); how routers, tiers, **Smart routing** and **Automatic updates** decide is on [Model Routing](/inference/mixture-of-models).
+
+```ts
+const router = new OpenAI({
+  baseURL: "https://platform.belvedir.ai/api/v1/route",
+  apiKey: process.env.BELVEDIR_API_KEY,
+});
+const res = await router.chat.completions.create(
+  { model: "x-ai/grok-4.6", messages }, // the model you used before, unchanged
+  { headers: { "x-session-id": sessionId } }
+);
+```
+
+## Request
+
+- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
+- **Body**: a standard OpenAI chat-completions body: `messages`, `tools`, `tool_choice`, `response_format`, images in content parts, `stream`, sampling parameters. Bodies cap at 1 MB (`413` beyond it).
+- **Session**: pass your session id in the `x-session-id` header or a `session_id` body field (stripped before forwarding) to pin the conversation to one model for up to 24 hours. Pinning is described under [session pinning](/api-reference/route#session-pinning).
+
+## Model ids
+
+`model` works two ways:
+
+- **A real model id** (`x-ai/grok-4.6`, `anthropic/claude-fable-5`, a bare `gpt-5.2`; the catalog with identifiers is on [Available Models](/inference/models)): the call goes through a router **anchored on that model**, created the first time you name it and listed on the **Routers** page as "From your code". The named model is the ceiling and answers every conversational call; cheaper tiers take only the machine-shaped tasks underneath it. Code that names Grok in one place and Claude in another keeps working and ends up with one router per model. Deleting one means the next call naming that model recreates it. A project that deleted all its routers forwards an explicit `model` unchanged (`x-belvedir-tier: client`).
+- **`"auto"`** (or no `model`): the call goes to the project's auto router. On a project with no router it returns a clear `400`.
+
+Bare ids from provider-native SDKs are normalized (`claude-sonnet-5`, `grok-4.6`), so a call site migrated from another SDK keeps the id it already names. OpenAI ids that only run on the Responses API (the `gpt-*-pro` and codex families) are refused with a `400` naming the base chat model (or a chat-latest variant) to use instead.
+
+## Where the call runs
+
+Hosted models run on Belvedir's provider accounts. Hosted open models run on the fastest available provider that meets Belvedir's data-retention requirements; that can be a pricier host than the cheapest one, and `usage.cost` reflects what actually served. To choose differently, pass a `provider` preference object on the body (for example `{"sort": "price"}`); it replaces the default and is forwarded as is. Client-side routing overrides (`models`, `route`, `plugins`, `transforms`, `web_search_options`) are ignored: the routed `model` is the only routing input.
+
+A route to a **local model** (Ollama-style `name:tag` ids) or to one of your **fine-tuned models** returns a clear `400` here, unless you registered your own deployment for that model id under **Cloud Inference**: then the call runs on your endpoint with your provider key, metered but never billed. Without a registered endpoint, use the [decision endpoint](/api-reference/route) and run the call yourself. Endpoints you register must be `https`, publicly resolvable, and not Belvedir's own hosts; a `3xx` from them is not followed and returns `502` with `code: "gateway_redirect"`, so point the base URL at the final host. How to register one is on [Cloud Inference](/inference/hosted).
+
+## Streaming, tools, structured output
+
+- **Streaming**: `stream: true` returns the provider's SSE byte for byte, with the usage block on the final chunk before `[DONE]` (Belvedir turns on `stream_options.include_usage` upstream, so you don't have to). A streamed response the client aborts is billed on an estimate of what was streamed.
+- **Tools**: `tools` and `tool_choice` pass through unchanged. Claude Fable 5.1 and Claude Opus 5.5 reject forced tool choice; see [Capabilities and Limits](/inference/capabilities#what-belvedir-cannot-do) for how Belvedir handles that.
+- **Structured output**: `response_format` (`json_object`, `json_schema`) passes through. With **Automatic updates** on, a non-streaming machine-shaped request with a strict output contract can be served by the Small tier first and escalated when the answer fails validation; the response says which happened in `x-belvedir-cascade: served-small` or `escalated`, and both attempts meter. The toggle is described on [Model Routing](/inference/mixture-of-models).
+
+## Response headers
+
+Which model served the call comes back in `model` on the response body and in these headers:
+
+| Header | Meaning |
+| --- | --- |
+| `x-belvedir-model` | the model that served the call |
+| `x-belvedir-tier` | why it was chosen (`default`, `strong`, `small`, `group`, `group-record`, `pinned`, `fixed`, `client`), as on the [decision endpoint](/api-reference/route#response) |
+| `x-belvedir-group` | the matched task group, when one matched |
+| `x-belvedir-router` | the id of the router that decided |
+| `x-belvedir-cost` | what the call cost in USD (below) |
+| `x-belvedir-tokens-saved` | tokens removed by **Token compression** (below) |
+| `x-belvedir-retry` | set when a server-side retry fired (below) |
+| `x-belvedir-cascade` | `served-small` or `escalated` on a structured-output cascade |
+
+## Token counts and cost
+
+Every response carries the standard OpenAI `usage` block: `prompt_tokens`, `completion_tokens`, `total_tokens`, plus whatever detail the provider reports (for example `prompt_tokens_details.cached_tokens`). Non-streamed calls carry it on the body; streamed calls get it on the final chunk. When **Token compression** ran, the counts are what the model actually received.
+
+What the call cost comes back as `usage.cost` (USD, a number) on the body and in the `x-belvedir-cost` header; streamed calls carry `usage.cost` on the final usage chunk. It is the amount billed to your organization for that call: the model's per-token rate from the Pricing page (**Inference → Pricing**), or the provider's reported cost for models billed that way, so summing `usage.cost` across calls reproduces your usage page. Cached input is priced at the cache-read rate. Calls served from your own registered endpoint report `0`. A model with no known price omits the field, and the usage page shows it unpriced. When a server-side retry fired, the metered first attempt also bills, and `usage.cost` covers only the answer you received.
+
+Calls are attributed to the calling API key and draw on your organization's balance. An organization with no balance and no card gets `402` before any model is called; balance, **Auto reload** and pay as you go are set under **Organization Settings → Billing**.
+
+## Token compression
+
+Under **Token compression** (a per-project toggle under **Project Permissions**, on by default), long prompts are shortened before the call; very short prompts are sent as is. The routing decision always reads your original text, and the model's response is never compressed. Tokens saved come back in `x-belvedir-tokens-saved` and count toward the savings shown on your Home and Billing pages. If compression is ever unavailable, your original prompt is sent unchanged; a routed call never fails because of it. Turn it off when every word in your prompts carries weight: lab protocols, legal or medical text, dense technical specs.
+
+## Reasoning controls
+
+When a call lands on a reasoning model and its `max_tokens` (or `max_completion_tokens`) is under 2,048, or it routed to the Small tier, Belvedir turns thinking off for that call so the budget goes to the answer instead of an unfinished reasoning trace. Set `reasoning`, `reasoning_effort`, or `chat_template_kwargs` yourself to override. Your setting is honored in translated form: each provider family accepts a different reasoning vocabulary, so Belvedir maps your value to what the serving model accepts, and an off setting (`none`, `minimal`, `enable_thinking: false`, `thinking: {"type": "disabled"}`) becomes that model's working off-switch. Graded effort levels are honored on OpenAI reasoning models and on open models that support them; Claude models on this endpoint honor only off, Claude Fable always thinks, and Grok's reasoning is fixed per model id, so reasoning controls are dropped for it.
+
+## Server-side retries
+
+Belvedir retries a doomed call rather than bill you for an empty answer. When a retry fired, the response says so in `x-belvedir-retry`:
+
+- **`thinking-disabled`**: a reasoning model spent the whole completion budget on its thinking trace and returned an empty answer. Belvedir retries once, same model, thinking off. This fires even when your own reasoning setting caused it.
+- **`content-filter-fallback`**: a model's safety filter returned an empty answer (`finish_reason: "content_filter"`) for a prompt the router chose it for. Belvedir retries on your router's other tiers, cheapest suitable first. Only when the router picked the model: if your code named it, you get that model's verdict unretried.
+- **`tool-choice-auto`**: the serving model rejects forced tool choice, so the call was sent with `tool_choice: "auto"`; see [Capabilities and Limits](/inference/capabilities#what-belvedir-cannot-do).
+
+A model that rejects a thinking-off switch is retried once without it. On the first two retries the first attempt is still metered: you pay for what the provider ran, and the retry saves the call. With **Smart routing** off, the content-filter fallback never switches models.
+
+## Errors
+
+| Status | When |
+| --- | --- |
+| `400` | `"auto"` on a project with no router; a local or fine-tuned model id with no registered endpoint; a Responses-API-only OpenAI id; an unpriced Anthropic, OpenAI or hosted open model id |
+| `401` | missing or invalid API key |
+| `402` | the organization has no balance and no card |
+| `403` | a Chinese-lab model on a project with **Chinese models** off (see [Data handling](/data-handling)) |
+| `413` | body over 1 MB |
+| `429` | rate limit: 25 requests per second sustained per API key with a burst of 300 by default; retry after a short backoff. Adjustable per organization, up to no limit at all: use **Speak to sales** on the Billing page |
+| `502` | `gateway_redirect`: a registered endpoint answered with a redirect |
+
+Upstream provider errors are returned with the provider's status and body. The full limits table is on [Capabilities and Limits](/inference/capabilities).

@@ -29,19 +29,17 @@ def handle_job(payload, session_id):
     loop.flush()
 ```
 
-Spans reported under the same id merge into one session on the platform, so the producer's turns and the worker's turns read as one conversation. For threads you spawn yourself, `contextvars.copy_context().run(...)` also carries the context over in Python, but re-opening the session is simpler and works everywhere.
+Spans reported under the same id merge into one session, so the producer's turns and the worker's turns read as one conversation. For threads you spawn yourself, `contextvars.copy_context().run(...)` also carries the context over in Python, but re-opening the session is simpler and works everywhere.
 
 If a workload genuinely has no id to carry (a third-party agent you can't modify), the ingest header `x-belvedir-session-from: trace` promotes each trace's id to a session id, but that makes one session per trace and fragments multi-step work, so pass the real id whenever you control the code.
 
 ## 3. Flush before the job ends
 
-Spans export in batches on a background thread. Long-lived workers should `flush()` at the end of each job: it's cheap, and it means a worker killed between jobs loses nothing. Short-lived workers must flush before exit, or the batch dies with the process.
-
-In Python, `flush()` is synchronous and returns once the export has completed, so calling it immediately before `os._exit()` (or a hard exit in a signal handler) is safe. In Node, `flush()` is `async`: `await flush()` before the process exits, or the promise is abandoned along with the batch. The hazard is exiting *without* it: `os._exit`, `process.exit()`, and `SIGKILL` skip exit hooks and kill the exporter, so an unflushed batch is silently lost.
+Call `flush()` at the end of each job (long-lived workers) and before exit (short-lived ones): `os._exit`, `process.exit()`, and `SIGKILL` skip exit hooks, so an unflushed batch is silently lost. In Python `flush()` is synchronous, so calling it right before `os._exit()` is safe; in Node it is `async`, so `await` it. Details on [Flush on serverless](/sdk/configuration#flush-on-serverless).
 
 ## Reporting outcomes from workers
 
-Workers are the natural place to report ground truth: the job is where you learn whether the work succeeded. Call `report_outcome(session_id, ...)` after `flush()`, since outcomes only attach to sessions the platform has already ingested. See [POST /api/v1/outcomes](/api-reference/outcomes).
+The job is where you learn whether the work succeeded, so call `report_outcome(session_id, ...)` there, after `flush()`; see [Outcomes](/api-reference/outcomes).
 
 ## Next steps
 

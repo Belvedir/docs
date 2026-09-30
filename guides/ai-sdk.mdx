@@ -10,7 +10,7 @@ Verified with `ai@7` and `@ai-sdk/openai-compatible@3`.
 
 ## 1. Initialize Belvedir before importing the AI SDK
 
-Same rule as every Node integration: `initialize()` must run before the LLM machinery loads. In an ESM entry point, import the AI SDK dynamically after `initialize()`; in Next.js, initialize from `instrumentation.ts` ([Next.js guide](/guides/nextjs)) and no dynamic import is needed.
+`initialize()` must run before the AI SDK loads, the same [init-order rule](/sdk/installation) as every Node integration. In Next.js, initialize from `instrumentation.ts` ([Next.js guide](/guides/nextjs)); in an ESM entry point, import the AI SDK dynamically after `initialize()`:
 
 ```ts
 import { initialize, withSession, flush } from "belvedir";
@@ -29,9 +29,7 @@ No `instrumentModules` entry is needed for the AI SDK: capture happens at the HT
 
 ## 2. Create an OpenAI-compatible provider
 
-Point it wherever your calls should execute. Both configurations trace identically; they differ only in who serves the call.
-
-**Tracing only** (keep your current endpoint, whether that's a provider or a gateway):
+Point it wherever your calls should execute; tracing is identical either way.
 
 ```ts
 const llm = createOpenAICompatible({
@@ -41,15 +39,7 @@ const llm = createOpenAICompatible({
 });
 ```
 
-**Tracing plus routed inference through Belvedir** (one key, [model routing](/inference/mixture-of-models) included):
-
-```ts
-const llm = createOpenAICompatible({
-  name: "belvedir",
-  baseURL: "https://platform.belvedir.ai/api/v1/route",
-  apiKey: process.env.BELVEDIR_API_KEY,
-});
-```
+To have Belvedir route and serve the calls instead, point `baseURL` at Belvedir's router with your Belvedir key; see [Route your calls](/inference/route-your-calls).
 
 ## 3. Wrap runs in a session and call as usual
 
@@ -79,4 +69,4 @@ These three AI SDK configurations make calls on protocols Belvedir doesn't captu
 - `@ai-sdk/anthropic` (Anthropic's Messages API)
 - Plain `"provider/model"` model strings, which route through the [Vercel AI Gateway's](/guides/vercel-ai-gateway) native protocol
 
-The fix is the rule at the top: swap those call sites to `createOpenAICompatible`. The same models remain available; the Vercel AI Gateway also serves an OpenAI-compatible endpoint (`https://ai-gateway.vercel.sh/v1`), so gateway users keep the gateway and just change how the AI SDK talks to it. The AI SDK's `experimental_telemetry` spans are not parsed by Belvedir today, so telemetry is not a substitute for this swap.
+The fix is the rule at the top: swap those call sites to `createOpenAICompatible`. The same models remain available; the Vercel AI Gateway also serves an OpenAI-compatible endpoint (`https://ai-gateway.vercel.sh/v1`), so gateway users keep the gateway and just change how the AI SDK talks to it. Belvedir does not parse the AI SDK's `experimental_telemetry` spans, so telemetry is not a substitute for this swap.

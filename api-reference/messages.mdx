@@ -1,0 +1,58 @@
+---
+title: "POST /api/v1/messages: Anthropic Messages Passthrough"
+sidebarTitle: "POST /messages"
+description: "Point the official Anthropic SDK at Belvedir and requests pass through to the Messages API untranslated: prompt caching, thinking, beta headers and native streaming intact."
+---
+
+Claude traffic that leans on Anthropic-native features does not have to flatten into the OpenAI shape. `POST /api/v1/messages` serves the **Messages API, untranslated**: point the official Anthropic SDK at Belvedir and requests pass through to Anthropic byte-faithfully.
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  baseURL: "https://platform.belvedir.ai/api", // the SDK appends /v1/messages
+  apiKey: process.env.BELVEDIR_API_KEY,        // your bv_live_ key
+});
+// Everything else is unchanged: cache_control, thinking, tools, streaming.
+```
+
+The SDK's `authToken` option (or the `ANTHROPIC_AUTH_TOKEN` env var) works as the key carrier too; Belvedir reads the key from either `Authorization: Bearer` or `x-api-key`.
+
+## What passes through intact
+
+- **Prompt caching**: `cache_control` breakpoints (per-block and top-level) reach Anthropic unmodified, and cache reads bill at the cache-read rate. Verify fidelity yourself by reading `usage.cache_read_input_tokens` off responses, exactly as you would against Anthropic directly. Cache writes bill at Anthropic's published write premiums (1.25× for 5-minute, 2× for 1-hour).
+- **Thinking**: adaptive thinking, `display` settings, thinking blocks in responses and streams; Belvedir never injects or strips a thinking config on this surface.
+- **`anthropic-beta` headers**: forwarded verbatim, except `oauth-*` betas (a client-auth artifact), which are dropped. Fast mode, compaction, context management and future betas work without waiting on Belvedir; fast-mode calls bill at Anthropic's published fast rate.
+- **Streaming**: Anthropic's native event shape (`message_start`, `content_block_delta`, `message_delta`), byte for byte. A frontend that parses Anthropic SSE keeps working unchanged.
+- **The Claude Agent SDK**: it honors the same env vars for all its traffic, subagents included. Set `ANTHROPIC_BASE_URL=https://platform.belvedir.ai/api` and `ANTHROPIC_API_KEY=<bv_live_ key>` (or `ANTHROPIC_AUTH_TOKEN`) and its inference goes through Belvedir.
+
+## Models
+
+This surface is **model-pinned by design**: pass a real model id. `"auto"` and routing live on the [OpenAI-compatible endpoint](/api-reference/chat-completions). Accepted ids:
+
+- Claude models, bare (`claude-sonnet-5`) or prefixed (`anthropic/claude-sonnet-5`).
+- These hosted open models, which Belvedir serves behind an Anthropic-compatible API: `zai-org/GLM-5.2-FP8`, `moonshotai/Kimi-K2.6`, `deepseek/deepseek-v4-flash-0731`, `openai/gpt-oss-120b`, `google/gemma-4-31B-it`, `nvidia/Gemma-4-31B-IT-NVFP4`.
+
+Any other id returns `400` pointing at the OpenAI-compatible endpoint. A Chinese-lab model on a project with **Chinese models** off returns `403` (see [Data handling](/data-handling)).
+
+## Server tools
+
+**Web search and web fetch work here; other Anthropic server tools do not.** `web_search_<date>` and `web_fetch_<date>` tools pass through and are metered from the response's `usage.server_tool_use`: each web search bills a flat 1 cent on top of tokens (Anthropic's list price of $10 per 1,000 searches); web fetch has no per-call fee. Code execution, computer use, the text editor / bash / memory / tool-search tools, the MCP connector (`mcp_servers`) and containers bill by container time or outside the usage object, so a request carrying one returns `400` before anything runs. Custom tools (a name plus `input_schema`, with no `type` or `type: "custom"`) work everywhere.
+
+Forced tool choice is not translated on this surface: Claude Fable 5.1 and Claude Opus 5.5 reject it, so send `{"type": "auto"}` yourself (see [Capabilities and Limits](/inference/capabilities#what-belvedir-cannot-do)).
+
+## Cost and metering
+
+Every token is metered from the native usage object, cache writes and fast mode included, at the rates on the Pricing page (**Inference → Pricing**), attributed to the calling API key. On non-streamed calls, what the call cost rides the `x-belvedir-cost` response header; the body is never rewritten. Streamed calls carry no cost header: read spend off the usage page. A streamed response the client aborts is billed on an estimate of what was streamed.
+
+## Errors and limits
+
+Errors come back in Anthropic's error envelope, so the SDK's typed errors work; upstream errors pass through verbatim. Request bodies cap at 20 MB (`413` beyond it). The key auth, the `402` spend gate and the rate limit (25 requests per second per API key, burst 300, adjustable per organization) are the same as on [chat completions](/api-reference/chat-completions#errors).
+
+## Message Batches
+
+With the Anthropic client pointed at `https://platform.belvedir.ai/api`, `client.messages.batches.create / retrieve / results / cancel / list / delete` run against `/api/v1/messages/batches`, which speaks Anthropic's Message Batches wire shapes over Belvedir's batch tier. It is documented with the other batch endpoints on [Batches](/api-reference/batches#anthropic-sdk-batch-methods).
+
+## What no router can carry
+
+Anthropic's Managed Agents / Agent API sessions run their inference inside Anthropic's own orchestration; there is no base URL to override, for Belvedir or anyone else. Instrument those workloads with the Belvedir SDK for observability instead.

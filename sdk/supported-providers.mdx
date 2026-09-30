@@ -4,7 +4,7 @@ sidebarTitle: "Providers"
 description: "Belvedir auto-instruments the major LLM providers with zero extra code. OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more are supported; the exact list differs by SDK."
 ---
 
-Both SDKs wrap OpenLLMetry, so the provider list is the set of instrumentations the underlying Traceloop SDK ships for that language. They differ, so check the list for your SDK:
+Belvedir auto-instruments these libraries once `initialize()` has run. The lists differ by language, so check the one for your SDK:
 
 **Node (`belvedir` on npm)**
 
@@ -31,8 +31,10 @@ Replicate and HuggingFace are not instrumented on Node; call them through an Ope
 - Frameworks: LangChain, LlamaIndex, Haystack, CrewAI, LiteLLM, OpenAI Agents, Agno, MCP
 - Vector stores: Chroma, Pinecone, Qdrant, Weaviate, Milvus, LanceDB, Marqo
 
-Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), self-hosted [vLLM](https://docs.vllm.ai)) work through the OpenAI SDK, and as of `belvedir` 0.4.0 (Node) / 0.6.0 (Python) also through raw `fetch` / `requests` / `httpx` calls to any OpenAI-compatible `chat/completions` endpoint, streamed responses included, with no client SDK at all. See [Cloud Inference](/inference/hosted).
+## OpenAI-compatible endpoints
 
-Apps built on the [AI SDK](https://ai-sdk.dev) (the `ai` package) are captured through that same raw-HTTP path when calls use `@ai-sdk/openai-compatible`; its native provider packages (`@ai-sdk/openai`, `@ai-sdk/anthropic`) and built-in gateway routing are not captured. See the [AI SDK guide](/guides/ai-sdk).
+Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), self-hosted [vLLM](https://docs.vllm.ai)) work through the OpenAI SDK, and also through raw `fetch` / `requests` / `httpx` calls to any OpenAI-compatible `chat/completions` endpoint, streamed responses included, with no client SDK at all. Belvedir's own hosted models are called the same way; see [Cloud Inference](/inference/hosted).
+
+Apps built on the [AI SDK](https://ai-sdk.dev) (the `ai` package) are captured only when calls go through `@ai-sdk/openai-compatible`; see the [AI SDK guide](/guides/ai-sdk).
 
 For agents you didn't write (OpenClaw, Hermes, or anything that already speaks OpenTelemetry), see [Agents without the SDK](/guides/otel-agents).

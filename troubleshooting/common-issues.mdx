@@ -1,28 +1,28 @@
 ---
 title: "Fix Belvedir SDK Issues: Traces, Vercel, and Init Order"
 sidebarTitle: "Common Issues"
-description: "Resolve the most common reasons LLM traces aren't appearing in your Belvedir dashboard, from Vercel runtime mismatches to initialization ordering."
+description: "Resolve the most common reasons LLM traces aren't appearing in your Belvedir dashboard, from Vercel runtime mismatches to initialization ordering, plus answers to frequent questions."
 ---
 
 ## No traces at all: check your baseUrl host
 
-Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `platform.belvedir.ai` (also served on `belvedir.ai`). Pointing `baseUrl` at any other host returns a 404 and the spans are dropped silently: the SDK keeps running and your app shows no error, but nothing is ever stored. Safest is to omit `baseUrl` entirely, since it defaults to `https://platform.belvedir.ai`.
+Traces are exported to `{baseUrl}/api/v1/traces`. The ingest endpoint lives on `platform.belvedir.ai` (also served on `belvedir.ai`). Pointing `baseUrl` at any other host returns a 404 and the spans are dropped silently: the SDK keeps running and your app shows no error, but nothing is ever stored. Safest is to omit `baseUrl` entirely, since it defaults to `https://platform.belvedir.ai`. Set it only for a different platform host.
+
+## Using a legacy package or an old SDK version?
+
+If your app still imports `@fractalresearch/loop`, `fractal-loop`, `@belvedir/loop`, or `belvedir-loop`, uses an `fr_live_` key, or is pinned to an older SDK release, several silent failure modes apply that current `belvedir` releases have fixed. Upgrade to the latest `belvedir` on npm or PyPI and follow [Migrating from Fractal](/migrating-from-fractal).
 
 ## Ingest or the router returns 402 or 429
 
-Neither is a code bug. A `402` from the router means the organization's credit balance is used up: buy credits on **Organization Settings → Billing**, or turn on **Auto reload** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (run past zero, charged hourly) is enabled per organization on request via **Speak to sales** on the Billing page. A `402` from trace ingest means the project has no organization to bill to; trace ingestion itself is not billed today. A `429` is the per-key rate limit: ingest and outcome reports allow 2 requests/second sustained with a burst of 120, ingest additionally 20 new sessions/second with a burst of 2,000 (an exporter that stamps a fresh session id on every span trips that one), the router 25 requests/second with a burst of 300 (adjustable per organization); back off for the `Retry-After` seconds and retry.
+Neither is a code bug.
 
-## `initialize() failed` warning mentioning `parseKeyPairsIntoRecord` (Node)
+A `402` from the router means the organization's credit balance is used up. Buy credits on **Organization Settings → Billing**, or turn on **Auto reload** there with a saved card (it's off by default; saving a card alone doesn't restore traffic). Pay as you go (credits first, then hourly charges to the saved card for exactly what was used) is turned on by the organization owner on the same page. A `402` from trace ingest means the project isn't attached to an organization with billing: create one for it under **Organizations**. Trace ingestion itself is not billed.
 
-A dependency conflict in `belvedir@0.3.1`: two incompatible OpenTelemetry generations could end up in one install, and `initialize()` failed with `Cannot read properties of undefined (reading 'parseKeyPairsIntoRecord')`. Initialization failures never crash your app, so the only symptom is that console warning and zero spans. Fixed in 0.3.2: run `npm install belvedir@latest` (delete `package-lock.json`'s pinned 0.3.1 entry or run `npm update belvedir` if the lockfile keeps the old version).
-
-## Traces silently missing after July 2026
-
-Node SDK versions before `@fractalresearch/loop@0.1.5` default to the retired ingest domain `platform.fractalresearch.ai`, where spans are dropped silently, with no error in your app. Upgrade to the latest `belvedir`, or pass `baseUrl: "https://platform.belvedir.ai"` explicitly to `initialize()`. Every published Python release (`belvedir-loop` 0.2.0 and later, and `belvedir`) already defaults to the live host; only a Python SDK built from a pre-rename checkout is affected.
+A `429` is the per-key rate limit. Ingest and outcome reports allow 2 requests per second sustained with a burst of 120; ingest additionally allows 20 new sessions per second with a burst of 2,000 (an exporter that stamps a fresh session id on every span trips that one). The router allows 25 requests per second with a burst of 300. Back off for the `Retry-After` seconds and retry.
 
 ## No traces appearing on Vercel
 
-The Belvedir SDK relies on OpenTelemetry, which requires the Node.js runtime. On Vercel, routes can default to the Edge runtime where the SDK silently skips initialization. Add the following to any API route that makes LLM calls:
+The Belvedir SDK is built on OpenTelemetry, which requires the Node.js runtime. On Vercel, routes can default to the Edge runtime, where the SDK silently skips initialization. Add the following to any API route that makes LLM calls:
 
 ```ts
 export const runtime = 'nodejs'
@@ -46,7 +46,7 @@ initialize({
 });
 ```
 
-Requires `belvedir` (the frozen legacy `@belvedir/loop@0.2.0` and `@fractalresearch/loop@0.1.3+` also support `instrumentModules`, but they predate several later fixes; migrate to `belvedir`). **Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
+**Also keep the LLM SDKs external** so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it). The full setup is in [Installation](/sdk/installation) and the [Next.js guide](/guides/nextjs).
 
 ## AI SDK app (the `ai` package) produces no LLM spans
 
@@ -54,13 +54,11 @@ The AI SDK's native provider packages and its built-in gateway routing use proto
 
 ## Conversations captured, but the last assistant reply is missing
 
-Streamed responses used to be the culprit: when an app called an OpenAI-compatible endpoint with raw `fetch` and `stream: true` (common in agent frameworks that ship their own HTTP client), the request's message history was recorded but the streamed completion never was, so a conversation's final assistant turn only appeared once a later turn embedded it in history, and a session's very last reply was lost.
-
-Fixed in `belvedir@0.4.0` (Node) and `belvedir==0.6.0` (Python): `initialize()` also instruments raw HTTP (`globalThis.fetch` in Node, `requests`/`httpx` in Python) for `POST .../chat/completions` calls, accumulating streamed deltas in the background and recording the full assistant message, tool calls, and usage when the stream ends. Update with `npm install belvedir@latest` / `pip install -U belvedir`. If you're pinned below those versions, route the call through the `openai` client (patched via `instrumentModules` in Node) instead of raw HTTP.
+When an app calls an OpenAI-compatible endpoint with raw `fetch` (Node) or `requests`/`httpx` (Python) and `stream: true`, current `belvedir` releases instrument the raw HTTP call too: streamed deltas are accumulated in the background and the full assistant message, tool calls, and usage are recorded when the stream ends. If the final reply is still missing, make sure you are on the latest `belvedir` (`npm install belvedir@latest` / `pip install -U belvedir`) and that the process lives long enough for the stream to finish before `flush()`; on an older release, route the call through the `openai` client (patched via `instrumentModules` in Node) instead of raw HTTP.
 
 ## Spans appear locally but not in production
 
-Serverless functions (Vercel, Lambda, Cloud Functions) can freeze or exit as soon as the response is sent, before the batching span processor exports. `await flush()` (Python: `loop.flush()`) at the end of every handler that makes LLM calls, before returning.
+Serverless functions (Vercel, Lambda, Cloud Functions) can freeze or exit as soon as the response is sent, before the batching span processor exports. `await flush()` (Python: `loop.flush()`) at the end of every handler that makes LLM calls, before returning. See [Configuration](/sdk/configuration).
 
 ## Spans from a background worker or thread are missing, or arrive without a session
 
@@ -68,20 +66,50 @@ Two separate causes. `initialize()` is per process: a queue worker, forked child
 
 ## Traces show up but no tasks or task groups
 
-Tasks and task groups only form for work wrapped in `withSession`. Make sure your agent runs inside it, and give the session ~30s of inactivity; segmentation only runs once a session goes quiet.
-
-## `withSession("id", fn)` produced traces with no session (Node, before 0.3.1)
-
-Versions of the Node SDK before `belvedir@0.3.1` only read the object form, `withSession({ sessionId }, fn)`. Passing a bare string was silently ignored: spans arrived with no session id, so no tasks or task groups formed and `reportOutcome` for that id returned false (the platform answered 404). Since 0.3.1 both forms work, and a call with no session id logs a warning instead of failing silently. Run `npm install belvedir@latest`, or pass `{ sessionId }` if you must stay pinned.
+Tasks and task groups only form for work wrapped in `withSession` (Python: `session()`). Make sure your agent runs inside it, and give the session a short period of inactivity: segmentation only runs once a session goes quiet. See [How it works](/how-it-works). A `withSession` call with no session id logs a warning; spans without a session never form tasks.
 
 ## `reportOutcome` returns false (or `POST /api/v1/outcomes` returns 404)
 
-The session hasn't been ingested yet: outcomes can only attach to sessions the platform has seen. Call `flush()` first so the spans arrive, then retry, or report later from a webhook or job.
-
-## Node process died at startup: unhandled rejection mentioning `api.traceloop.com`
-
-The underlying Traceloop SDK's "sync" feature (prompt-config fetching from Traceloop's servers) defaults on, and a network failure there rejects an unhandled promise, which Node treats as fatal. `belvedir` versions after 0.4.1 turn it off inside `initialize()`; on 0.4.1 or earlier set `TRACELOOP_SYNC_ENABLED=false` in the environment. Belvedir never uses that feature and no data goes to Traceloop either way.
+The session hasn't been ingested yet: outcomes can only attach to sessions Belvedir has seen. Call `flush()` first so the spans arrive, then retry, or report later from a webhook or job. Semantics are in the [outcomes reference](/api-reference/outcomes).
 
 ## Traces missing in development
 
 Ensure your `BELVEDIR_API_KEY` environment variable is set and that `initialize()` is called before any LLM client is created. Check your terminal for SDK warnings on startup.
+
+## Other questions
+
+### Which runtimes are supported?
+
+The Node SDK requires the Node.js runtime (Node 18 or newer); the Edge runtime on Vercel and similar platforms won't work because OpenTelemetry needs Node APIs. The Python SDK runs on CPython 3.10 or newer. See the [Vercel guide](/guides/vercel) for the runtime opt-in.
+
+### How long until traces appear in the dashboard?
+
+Traces appear within seconds. Tasks and task groups form shortly after a session goes quiet; see [How it works](/how-it-works).
+
+### Is my API key safe in `instrumentation.ts`?
+
+Yes, `instrumentation.ts` runs on the server. Never expose `BELVEDIR_API_KEY` to client-side code.
+
+### Can I use one project for multiple apps?
+
+Yes. Set a different `appName` per app when calling `initialize()`; each app's traces carry it in their stored metadata. To split apps apart in the dashboard's views, give each app its own API key: the Data pages filter by key.
+
+### What if my agent uses more than one LLM provider?
+
+Pass every provider you use to `instrumentModules`, for example `{ openAI: openai.OpenAI, anthropic }`. Every span records which provider and model served it, so you can compare them in the dashboard.
+
+### Can I route between local and hosted models?
+
+Yes, see [Mixture of models](/inference/mixture-of-models) and [Local models](/inference/local-models).
+
+### Can I tell Belvedir whether a session actually worked?
+
+Yes, report ground-truth outcomes with `reportOutcome(sessionId, "success" | "fail")` (Python: `report_outcome`), or `POST /api/v1/outcomes` directly. A reported fail keeps that session's tasks out of training data. Report after `flush()`. See the [outcomes reference](/api-reference/outcomes).
+
+### What does Belvedir charge for?
+
+Only inference: routed calls through the router endpoints, calls you make in the dashboard Playground, and hosted inference sessions, billed per token at the rates on the Pricing page (**Inference → Pricing**) and drawn from the organization's credit balance. Tracing, segmentation, training runs, and benchmark runs are not billed.
+
+### How long is my data kept?
+
+Trace data has no automatic expiry, and batch inference results are kept for 29 days. See [Data handling](/data-handling).

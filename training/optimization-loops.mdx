@@ -4,7 +4,7 @@ sidebarTitle: "Optimization Loops"
 description: "Harness evolution, prompt evolution, and LoRA finetuning: improvement loops that feed on your production traces and end back in production."
 ---
 
-Observability is the first half of Belvedir; the second half is closing the loop. Every project can run one or more **improvement loops** that feed on the same production traces: **Harness evolution** and **Prompt evolution** rewrite what your agent runs and reads, and **LoRA finetuning** distills your best traffic into a small model's weights. All of them end back in production, producing better traces.
+Observability is the first half of Belvedir; the second half is closing the loop. Every project can run one or more **improvement loops** over the same production traces. **Harness evolution** and **Prompt evolution** rewrite what your agent runs and reads. **LoRA finetuning** distills your best traffic into a small model's weights. All of them end back in production, producing better traces.
 
 ```
              ┌──────────────────────────────────────────┐
@@ -33,88 +33,39 @@ Observability is the first half of Belvedir; the second half is closing the loop
 
 ## Types of training
 
-Each loop evolves a different layer of your agent against its own production traces:
+Each loop improves a different layer of your agent against its own production traces:
 
-- **Prompt evolution**: a recursive self-improvement loop over what your agent is told and remembers (system prompts, skills, instructions, memory files), never its application logic. Production sessions show what it misses and should have remembered; the loop distills that back into the scaffolding.
-- **Harness evolution**: the same loop with the whole harness on the table: prompts, tools, and code all improve together, opening a PR with the winner.
-- **LoRA finetuning**: train lightweight LoRA adapters on your traces instead of touching the full weights: cheap to run, quick to iterate, and swappable per task type, on top of the supported open base models. See [Model Training](/training/overview).
+- **Prompt evolution** improves what your agent is told and remembers (system prompts, skills, instructions, memory files), never its application logic. Production sessions show what it misses and should have remembered; the loop distills that back into the scaffolding.
+- **Harness evolution** is the same loop with the whole harness on the table: prompts, tools, and code improve together, and the winner opens a PR.
+- **LoRA finetuning** trains lightweight LoRA adapters on your traces on top of a supported open base model: cheap to run, quick to iterate, and swappable per task type. See [LoRA finetuning](/training/overview).
 
-Loops are configured per project from the Training section (Training → Loops → Make a loop), and a project can run several at once. Harness evolution, Prompt evolution, and LoRA finetuning are the loop types; each loop you make takes a name of your own in the wizard.
+Loops are configured per project from **Training → Loops → Make a loop**, and a project can run several at once. Each loop you make takes a name of your own in the wizard.
 
-## Harness evolution & prompt evolution: two designs
+## Harness evolution and prompt evolution
 
-Both loops start from your repo exactly as it is today (the "seed"); each dataset example is one real trace: the transcript of what your agent actually did, plus its outcome. The difference between the two loops is what may be touched: Harness evolution can edit the whole repo, while Prompt evolution is constrained to scaffolding (prompts, skills, memory files, instructions), so it improves what the agent is _told and remembers_, never its application logic.
+Both loops start from your repo exactly as it is today. Each example is one real trace: what your agent actually did, plus its outcome. The difference between the two loops is what may be touched. Harness evolution can edit the whole repo. Prompt evolution is limited to scaffolding (prompts, skills, memory files, instructions), so it improves what the agent is told and remembers, never its application logic.
 
-Each project also picks a **design**: the algorithm that proposes changes. **Loop 2** is the default; **Loop 1 (GEPA)** is the original design. Pick it in the setup wizard's approach step, or with `belvedir setup <project> --design loop1|loop2`.
+Belvedir scores candidates against your recorded traces; your agent is not run against live users. Every proposed change cites the traces that motivated it.
 
-### Loop 2 (default): diagnose and repair
+### Two designs
 
-Loop 2 works the way an engineer would: triage the failing traces into failure modes, diagnose each one's root cause against the relevant repository files (reading a structured step graph of each trace, not just the transcript), and write one targeted patch per failure mode with checkable fix criteria. It can create new files (skills, memory) outright, remembers what earlier runs shipped or had rejected, and every proposed change cites the traces that motivated it.
+Each project picks a **design**, the method that proposes changes. Pick it in the setup wizard's **Choose your approach** step, or with `belvedir setup <project> --design loop1|loop2`.
 
-```
-  failing production traces
-       │
-       ▼
-  TRIAGE into at most 3 failure modes
-       │
-       ▼
-  for each failure mode:
-    DIAGNOSE the root cause against the
-    relevant repo files, then PATCH: whole-file
-    edits (and brand-new files) for that mode
-       │
-       ▼
-  SCORE each patch on real traces: where the
-  patch touches what the model was told, the
-  recorded model call is RE-RUN with the patch
-  applied and both outputs are compared blind,
-  in both orders. Keep only patches that improve
-  the failing traces without regressing the OK
-  ones, then merge the compatible winners
-       │
-       ▼
-  held-out validation → per-file diffs for your review → PR
-```
+- **Loop 2 (diagnose and repair)**, the default. It triages failing traces into failure modes, diagnoses each root cause against your repository, and writes targeted fixes. Good when failures cluster into a few identifiable causes you want fixed precisely.
+- **Loop 1 (GEPA)**, the original design. It evolves candidates with [GEPA](https://arxiv.org/abs/2507.19457)'s evolutionary search. Good for open-ended improvement when you would rather explore many variants than fix named failures.
 
-### Loop 1: GEPA
+### Review before anything ships
 
-Loop 1 runs [GEPA](https://arxiv.org/abs/2507.19457) (Genetic-Pareto), an evolutionary optimizer: natural-language reflection rewrites one file at a time and a diverse pool of variants competes across traces.
+By default nothing ships without you: proposals wait as per-file diffs under **Training → History**, and approving one opens the GitHub PR. Autonomy is set per loop in the setup wizard: **Review first** (the default) or **Auto-PR** to skip the gate.
 
-```
-  seed = your repo's current files
-       │
-       ▼
-  SCORE against real production traces  ◄─────────┐
-    unchanged files → the trace's real outcome    │
-      (error / slow / ok)                         │
-    edited files → an LLM judge reads the         │
-      transcript + the diff: "would this have     │
-      fixed it without breaking what worked?"     │
-       │                                          │
-       ▼                                          │
-  REFLECT: the model studies the worst-scoring    │
-  transcripts and rewrites ONE file (a prompt,    │
-  a skill, a memory file, code), or authors a     │
-  brand-new skill in an empty slot                │
-       │                                          │
-       ▼                                          │
-  KEEP any variant that wins on some traces ──────┘
-  (a diverse pool, not one line of descent)
-       │   after ~60 scored attempts
-       ▼
-  best variant → per-file diffs for your review → PR
-```
+## Failure signals
 
-The scoring trick is shared by both designs and is what makes this work without re-running your agent: unchanged code is graded by _what actually happened_, and each proposed edit is graded by a judge reasoning about whether it would have prevented the failures visible in the transcript. Failing traces are deliberately over-sampled so there is always something to win.
+What counts as a failing trace is a per-project choice of **optimization signals**: **Errors** (traces with failed LLM or tool calls), **Latency** (traces slower than 5 seconds end to end), and **User frustration** (users repeating themselves or correcting the agent). The setup wizard suggests signals from your improvement-target text; runs focus on traces matching the signals you select.
 
-By default nothing ships without you: proposals wait as per-file diffs on Training History, and approving opens the GitHub PR. Each loop has its own autonomy, set in the Training section's setup wizard. Switch a loop to Auto-PR to skip the gate.
+## Repository access
 
-## Failure signals & repo access
-
-What counts as a _failing_ trace is a per-project choice of **optimization signals**: _Errors_ (traces with failed LLM or tool calls), _Latency_ (traces slower than ~5 seconds end to end), and _User frustration_ (users repeating themselves or correcting the agent). The training setup wizard suggests signals from your improvement-target text; the optimizer over-samples traces matching the selected signals and scores its baseline against the same definitions.
-
-To read your repo and open PRs, the optimizer needs GitHub access. Connect the **Belvedir GitHub App** from Account settings → Integrations. You choose exactly which repositories the app may touch (all of a namespace, or hand-picked ones; GitHub's own grant screen). Then, in Project settings → Repository access, pick the repos this project's loops may use from your connected accounts. Adding a repo is verified against _your_ GitHub access, and from then on it works for everyone on the project: teammates run loops and approve PRs through Belvedir without ever holding repo credentials (the platform mints short-lived tokens per run; nothing is stored). You can revoke at any time by uninstalling the app or narrowing its repo selection on GitHub.
+To read your repo and open PRs, a loop needs GitHub access. Connect the **Belvedir GitHub App** from your account page; you choose exactly which repositories the app may touch on GitHub's own grant screen. Then, in **Project settings → Repository access**, pick the repos this project's loops may use from your connected accounts. Adding a repo is verified against your own GitHub access, and from then on it works for everyone on the project: teammates run loops and approve PRs through Belvedir without ever holding repo credentials (repository access is scoped to each run; nothing is stored). Revoke at any time by uninstalling the app or narrowing its repo selection on GitHub. The **Harness access** permission under **Project Permissions** turns repository access off for the whole project; see [Data handling](/data-handling).
 
 ## One skeleton
 
-Every loop shares one skeleton: _propose a variant, score it against reality, keep the winner_. The optimization loops' variants are text scored against past traces; the model loop's variants are weights scored by harness runs. Auto-training can keep the model loop turning on its own, retraining after every N new traces or on a schedule.
+Every loop shares one skeleton: propose a variant, score it against reality, keep the winner. Optimization loops propose text scored against past traces; LoRA finetuning proposes weights scored by benchmark runs. [Auto-training](/training/overview#auto-training) can keep the LoRA loop turning on its own.

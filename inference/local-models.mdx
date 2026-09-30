@@ -36,6 +36,6 @@ const res = await client.chat.completions.create({
 
 ## 3. Trace it as usual
 
-Nothing changes on the Belvedir side: initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap agent runs in `withSession` (see [Quickstart](/quickstart)). Spans arrive with the local model name (e.g. `qwen3:4b`) so you can tell local and cloud calls apart in the dashboard.
+Nothing changes on the Belvedir side: initialize the SDK and wrap agent runs in `withSession` exactly as for a hosted endpoint; see [Cloud Inference](/inference/hosted#3-trace-it-as-usual). Spans arrive with the local model name (for example `qwen3:4b`), so local and cloud calls stay distinguishable in the dashboard.
 
 > Note: inference stays on your machine, but traces do not: prompts and completions are exported to Belvedir like any instrumented app. Only enable tracing for local workloads you're comfortable sending.

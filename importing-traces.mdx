@@ -4,17 +4,21 @@ sidebarTitle: "Importing Traces"
 description: "Bring trace history over from LangSmith, Langfuse, Phoenix, Braintrust, PostHog, Mastra, or a CSV/JSONL/JSON file."
 ---
 
-Already tracing with another observability platform? Import that history instead of waiting for fresh traffic. Imported traces go through the same pipeline as live ones, so they form sessions, tasks, and task groups, and count toward training.
+Already tracing with another observability platform? Import that history instead of waiting for fresh traffic. Imported traces are processed like live ones, so they form sessions, tasks, and task groups, and count toward training.
 
 ## 1. From the dashboard
 
-**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick. The import runs in the background: you can leave the page, and progress (with a Cancel button and per-conversation failures) shows at the top of Import Data. Credentials are encrypted for the length of the import and deleted when it finishes; self-hosted deployments need a public https URL. Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically. Imported conversations are labeled by source ("LangSmith", "PostHog", "File import", and so on) rather than by an API key: pick that label in the API key filter on the Data pages, or as a data source in the training wizard, to work with just the imported data. No API key is created for an import.
+**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick. The import runs in the background: you can leave the page, and progress (with a **Cancel** button and per-conversation failures) shows at the top of **Import Data**. Credentials are encrypted for the length of the import and deleted when it finishes; self-hosted deployments need a public https URL.
 
-Langfuse imports read the v2 observations API, so they keep working on Langfuse Cloud after the v3 read endpoints are removed on November 16, 2026, and on self-hosted Langfuse v4. Older self-hosted deployments without the v2 API are read through the legacy endpoints automatically.
+Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically.
+
+Imported conversations are labeled by source ("LangSmith", "PostHog", "File import", and so on) rather than by an API key: pick that label in the API key filter on the Data pages, or as a data source in the training wizard, to work with just the imported data. No API key is created for an import.
+
+Langfuse imports read the v2 observations API, so they keep working on Langfuse Cloud after Langfuse removes its v3 read endpoints (November 16, 2026) and on self-hosted Langfuse v4. Older self-hosted deployments without the v2 API are read through the legacy endpoints automatically.
 
 ## 2. Or from the shell
 
-Lists nothing, imports the 20 most recent conversations. Pass `--list` first to see what would be imported (both importers also take `--base-url` when your traces should go to a platform host other than the default `https://platform.belvedir.ai`):
+The LangSmith importer imports the 20 most recent conversations by default. Pass `--list` first to see what would be imported. Both importers also take `--base-url` when your traces should go to a platform host other than the default `https://platform.belvedir.ai`:
 
 ```bash
 pip install belvedir
@@ -53,14 +57,14 @@ imp.import_conversations(
 )
 ```
 
-`import_conversations` looks for the ids within the most recent conversations (its `limit`, default 20). If you picked ids from a deeper `list_conversations(limit=...)` call, pass the same `limit` to `import_conversations` or it raises `LangSmithImportError` for the older ones. For local files, `FileImporter(path)` in `belvedir.importers.files` has the same `list_conversations(limit=...)`, but its `import_conversations(belvedir_api_key=..., limit=...)` takes no ids: it imports the whole file, capped by `limit` if you pass one. Both importers also accept `belvedir_base_url=` (the `--base-url` flag's equivalent). The `belvedir_loop.importers.*` paths keep working for existing scripts.
+`import_conversations` looks for the ids within the most recent conversations (its `limit`, default 20). If you picked ids from a deeper `list_conversations(limit=...)` call, pass the same `limit` to `import_conversations` or it raises `LangSmithImportError` for the older ones. For local files, `FileImporter(path)` in `belvedir.importers.files` has the same `list_conversations(limit=...)`, but its `import_conversations(belvedir_api_key=..., limit=...)` takes no ids: it imports the whole file, capped by `limit` if you pass one. Both importers also accept `belvedir_base_url=` (the `--base-url` flag's equivalent). Scripts written against the old `belvedir_loop` import paths: see [Migrating from Fractal](/migrating-from-fractal).
 
 ## What to expect
 
-Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history — LangChain message encodings and raw OpenAI chat completions (`choices`, what LangSmith's `wrap_openai` stores) both count, and an assistant turn that only calls tools is kept as `[tool_call] name(arguments)` rather than dropped — tool runs their names, and errors their status, so signals and the optimizer's failure weighting work on imported data too. Tasks appear ~30s after an import finishes, once the session goes quiet.
+Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history (LangChain message encodings and raw OpenAI chat completions, what LangSmith's `wrap_openai` stores, both count, and an assistant turn that only calls tools is kept as `[tool_call] name(arguments)` rather than dropped), tool runs keep their names, and errors keep their status, so failure signals and optimization treat imported sessions like live ones. Tasks appear once the imported session goes quiet; see [How it works](/how-it-works).
 
 <Warning>
 Re-importing the same conversation duplicates its spans, so import once.
 </Warning>
 
-Dashboard imports have a few bounds: each call to the source is given 20 seconds and 16 MB (a slow or oversized response fails that conversation with a clear message and the import moves on), a rate-limited or briefly unavailable source (HTTP 429, 502–504) is retried up to three times with backoff before the conversation is marked failed, an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). If the runner is interrupted mid-conversation, that conversation may be missing rather than imported twice: check the per-conversation failures and counts at the top of Import Data.
+Dashboard imports have two bounds: an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). A conversation that fails is listed with its reason at the top of **Import Data** and the import moves on, so check the per-conversation failures and counts there when the totals look short.

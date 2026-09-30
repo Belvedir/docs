@@ -4,7 +4,7 @@ sidebarTitle: "Next.js"
 description: "Learn how to add Belvedir tracing to your Next.js app with the correct initialization order for both server and Edge runtime environments."
 ---
 
-The SDK patches your LLM client the moment `initialize()` runs, so it must run **before the LLM SDK is imported**. In Next.js the only place that's guaranteed is the `instrumentation.ts` hook at your project root:
+`initialize()` must run before your LLM SDK is imported (the rule is explained on [Installation](/sdk/installation)). In Next.js the only place that's guaranteed is the `instrumentation.ts` hook at your project root (or `src/instrumentation.ts` if you use a `src/` folder):
 
 ```ts
 // instrumentation.ts  (project root)
@@ -22,10 +22,21 @@ export async function register() {
 }
 ```
 
-Do **not** call `initialize()` from inside a route file. By then the LLM SDK is already imported and the patch won't take. In Next.js, always pass `instrumentModules` (only the SDKs you actually use): bundlers can load LLM SDKs in ways auto-instrumentation can't see, which silently drops all LLM spans.
+Do **not** call `initialize()` from inside a route file. Always pass `instrumentModules` in Next.js (only the SDKs you actually use): the bundler can load LLM SDKs in ways auto-instrumentation can't see, which silently drops all LLM spans.
 
 ## Keep LLM SDKs external
 
-Also keep the LLM SDKs external so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless. Mind the version-specific config key: on Next 15\+ it's top-level `serverExternalPackages`; on Next 13/14 it's `experimental.serverComponentsExternalPackages`. The Next 15 name is silently ignored there (the build prints an `Unrecognized key(s)` warning; don't ignore it).
+Keep the LLM SDKs external so every bundle shares one runtime copy. If they get inlined, each bundle has its own private copy and `instrumentModules` patches one your routes never use. List `belvedir` itself as well: a route or server action that bundles its own copy calls `withSession()`/`flush()` on an uninitialized duplicate, so flush silently no-ops and spans drop on serverless.
 
-Requires `belvedir`. The legacy `@belvedir/loop@0.2.0` and `@fractalresearch/loop` packages still install and run, but they are frozen and predate several fixes (raw-`fetch` capture, the string `withSession` form, a dependency-conflict crash fixed in 0.3.2); migrate to `belvedir`.
+```js
+// next.config.js (Next 15 and later)
+module.exports = {
+  serverExternalPackages: ["belvedir", "openai", "@anthropic-ai/sdk"],
+};
+```
+
+On Next 13/14 the key is `experimental.serverComponentsExternalPackages`; the Next 15 name is silently ignored there, and the build prints an `Unrecognized key(s)` warning you shouldn't ignore.
+
+## Use the Node.js runtime
+
+The SDK needs Node.js APIs, so a route declared with `export const runtime = "edge"` runs untraced: the logs show `initialize() failed; the app will run untraced` and no spans arrive. Use the Node.js runtime (`export const runtime = "nodejs"`, the default) for every route that makes LLM calls, and `await flush()` before the handler returns on serverless hosts; see the [Vercel guide](/guides/vercel).

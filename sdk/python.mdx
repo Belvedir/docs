@@ -4,7 +4,7 @@ description: "Trace Python agents with the belvedir package."
 sidebarTitle: "Python"
 ---
 
-Python agents use `belvedir`: the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages. (The older `belvedir-loop` distribution is frozen at 0.4.0 and still installs, but fixes land in `belvedir`.)
+Python agents use `belvedir`: the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages ([full list](/sdk/supported-providers)). Coming from `belvedir-loop`? See [Migrating from Fractal](/migrating-from-fractal).
 
 ## 1. Install the SDK
 
@@ -14,7 +14,7 @@ pip install belvedir
 
 ## 2. Initialize at process startup
 
-Call `initialize()` once, before your agent starts making LLM calls. Unlike Next.js there is no bundler in the way, so no `instrumentModules` equivalent is needed. A second `initialize()` call logs a warning and is ignored:
+Call `initialize()` once, before your agent makes LLM calls. There is no `instrumentModules` equivalent: auto-instrumentation sees the installed packages directly, so the only ordering rule is `initialize()` first (details on [Installation](/sdk/installation)). A second `initialize()` call logs a warning and is ignored:
 
 ```python
 import os
@@ -26,7 +26,7 @@ loop.initialize(
 )
 ```
 
-On `belvedir>=0.6.0`, raw `requests` / `httpx` calls to OpenAI-compatible endpoints (`POST .../chat/completions`) are captured automatically too, streamed responses included, so agent frameworks with their own HTTP layer are traced without a client SDK. Don't rewrite raw HTTP calls to a client SDK just for tracing; pass `instrument_http=False` to `initialize()` to opt out.
+Raw `requests` / `httpx` calls to OpenAI-compatible endpoints (`POST .../chat/completions`) are captured automatically too, streamed responses included, so agent frameworks with their own HTTP layer are traced without a client SDK. Don't rewrite raw HTTP calls to a client SDK just for tracing; pass `instrument_http=False` to `initialize()` to opt out.
 
 ## 3. Wrap agent work in sessions
 
@@ -40,15 +40,10 @@ with loop.session(session_id=chat_id, user_id=user.id):
 
 ## 4. Flush before short-lived processes exit
 
-Spans export in batches; scripts and serverless handlers can exit before the batch ships. Call `loop.flush()` before returning, or pass `disable_batch=True` to `initialize()` for local testing.
+Call `loop.flush()` before a script or serverless handler returns, or pass `disable_batch=True` for local testing; see [Flush on serverless](/sdk/configuration#flush-on-serverless).
 
 ## 5. Report outcomes
 
-When your app knows whether a session actually worked, report it. Reported outcomes beat Belvedir's model-judged labels: a `"fail"` keeps every task in that session out of training data.
+When your app knows whether a session actually worked, call `loop.report_outcome(chat_id, "success" if order_shipped else "fail")` after `flush()`; a `"fail"` keeps that session out of training data. Semantics and return values are on [Outcomes](/api-reference/outcomes).
 
-```python
-loop.flush()  # the session must have arrived first
-loop.report_outcome(chat_id, "success" if order_shipped else "fail")
-```
-
-`flush()` and `report_outcome()` never raise; failures log warnings under the `belvedir.loop` logger. `report_outcome` returns `False` if Belvedir hasn't ingested the session yet (flush first, then retry) or if the outcome is anything other than `"success"` or `"fail"`.
+`flush()` and `report_outcome()` never raise; failures log warnings under the `belvedir.loop` logger.

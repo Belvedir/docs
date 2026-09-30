@@ -1,12 +1,22 @@
 ---
 title: "How Belvedir Works"
-sidebarTitle: "How It Works"
-description: "The six-stage pipeline Belvedir uses: instrument, collect, segment, gather, clean, and optimize."
+sidebarTitle: "How it works"
+description: "What happens after your traces arrive: instrument, collect, segment, gather, clean, and optimize."
 ---
 
-1. **Instrument**: The SDK hooks into your LLM client libraries and captures every call, tool call, input, and output as an OpenTelemetry span.
-2. **Collect**: Spans are batched and sent to the Belvedir platform via the OTLP HTTP protocol, tagged with the session id from `withSession`.
-3. **Segment**: Once a session goes quiet, an LLM reads the full transcript and splits it into the discrete tasks the agent performed, each with a title, summary, tool calls, and outcome.
-4. **Gather**: Each task is embedded and gathered with other tasks of the same type into a task group, so you can see how often each kind of task runs and how it performs over time.
-5. **Clean**: A periodic pass keeps your task groups clean: it merges duplicates, splits overbroad ones, and renames unclear labels. Every operation it considers is recorded on the platform's Cleaning log.
-6. **Optimize**: **Run analysis** on a project evolves your agent's code against its own production traces. By default the proposed changes wait for your review: inspect the per-file diff under **Training → History**, then approve to open a GitHub PR or reject. Autonomy is chosen per loop in the Training section's setup wizard; switch a loop to Auto-PR to skip the review step for that loop. See [Optimization Loops](/training/optimization-loops) for how the loops work, and connect the Belvedir GitHub App under Account settings → Integrations so the optimizer can open PRs on your repos.
+Belvedir turns raw traces into a picture of the tasks your agent performs, then uses that picture to route, train, and improve the agent. Six stages, in order:
+
+1. **Instrument.** The SDK hooks into your LLM client libraries and records every model call, tool call, input, and output as an OpenTelemetry span.
+2. **Collect.** Spans are batched and sent to Belvedir, tagged with the session id from `withSession`. Traces appear on the **Traces** and **Conversations** pages within seconds.
+3. **Segment.** About 30 seconds after a session goes quiet, Belvedir reads the transcript and splits it into the discrete tasks the agent performed, each with a title, summary, tool calls, and an outcome. They appear on the **Tasks** page.
+4. **Gather.** Tasks of the same kind are gathered into task groups, so you can see how often each kind of task runs and how it performs over time (**Task Groups** page).
+5. **Clean.** A periodic pass merges duplicate groups, splits overbroad ones, and renames unclear labels. Every operation it considers is recorded on the **Cleaning Log**.
+6. **Optimize.** Task groups feed three kinds of work: [routing](/inference/mixture-of-models) each call to the cheapest model that handles that kind of task, [optimization loops](/training/optimization-loops) that propose changes to your agent's prompts and code and open a GitHub PR after your review, and [LoRA finetuning](/training/overview) on your successful traffic. Connect the repository under **Project Settings → Repository Access** so the loops can open PRs.
+
+The only thing you have to do is stage one. Everything else runs on the platform.
+
+## Sessions and outcomes
+
+Sessions are what make stages three to six possible. A session groups every span from one agent run. Without one you still get raw traces, but they cannot be segmented into tasks, so wrap agent work in `withSession` (Node) or `session` (Python).
+
+Belvedir judges each task's outcome from the transcript. When you know the real result, report it with `reportOutcome` or `POST /api/v1/outcomes`; a reported outcome overrides the judgment, and a `fail` keeps that session out of training data. See [Outcomes](/api-reference/outcomes).

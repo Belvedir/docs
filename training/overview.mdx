@@ -1,39 +1,45 @@
 ---
-title: "Model Training"
+title: "LoRA finetuning"
 description: "Fine-tune an open model on your own production traffic with LoRA adapters."
-sidebarTitle: "LoRA Finetuning"
+sidebarTitle: "LoRA finetuning"
 ---
 
-Fine-tune an open model on your own production traffic. Belvedir takes the successful tasks it segmented from your traces, distills them into a dataset, and trains a LoRA adapter. Training runs on a managed training provider by default (training data is sent there for the run); the setup wizard's **Private (our GPUs)** option keeps training data on Belvedir's own hardware instead. The finished adapter appears on the Models page and is yours to download.
+Fine-tune an open model on your own production traffic. Belvedir takes the successful tasks it segmented from your traces, distills them into a dataset, and trains a LoRA adapter. The finished adapter appears on the Models page and is yours to download.
+
+Training compute is your choice in the setup wizard: the **managed fleet** (the default; training data is sent there for the run) or **Private (our GPUs)**, which keeps training data on Belvedir's own hardware. [Data handling](/data-handling) covers the per-project gates on what training may read.
 
 ## What it trains on
 
-Successful tasks that captured both an input and an output, shown as the example count on the Training page. One in five tasks is held out for evaluation and never trained on; those held-out tasks are what generated environments score against, so an environment run never measures a model on its own training data. You can train on everything the agent does well, or pick a single task group to distill one kind of work into a specialist. Training needs at least 200 examples; keep sending traces until you cross the floor. Datasets are capped at 1,000 examples; the newest eligible tasks win.
+Successful tasks that captured both an input and an output, shown as the example count on the Training page. **One in five tasks is held out for evaluation; training never sees them.** Those held-out tasks are what [generated environments](/benchmarks/environments) score against, so an environment run never measures a model on its own training data. You can train on everything the agent does well, or pick a single task group to distill one kind of work into a specialist.
+
+Training needs at least 200 examples; keep sending traces until you cross the floor. Datasets are capped at 1,000 examples; the newest eligible tasks win. Sessions you report as `"fail"` through [outcomes](/api-reference/outcomes) are excluded.
 
 ## Training methods
 
-Three ways to turn the same dataset into an adapter, picked per run. Runs launch from the CLI (`belvedir train <project> --method sft|opsd|rl`) or automatically (below):
+Three ways to turn the same dataset into an adapter, picked per run. Runs launch from the dashboard, from the CLI (`belvedir train <project> --method sft|opsd|rl`), or [automatically](#auto-training):
 
 - **Supervised fine-tuning** teaches the model to reproduce your successful outputs directly (the default and the cheapest).
 - **On-policy self-distillation** lets the model generate its own answers and nudges each one toward what a teacher (the same model shown the known-good output) would have said, so it learns from its own mistakes instead of copying.
-- **Reinforcement learning** generates answers and trains on a score: either an LLM judge grading each sample against your reference outputs, or a cheaper similarity reward. RL runs use GRPO or PPO; leave the algorithm on Auto and Belvedir picks the better fit for your reward and dataset size. Two constraints: the similarity reward runs only on the private-GPU backend, so a base that trains on the managed fleet (Qwen 3.5 9B) refuses it ("trains on the managed fleet, which does not support similarity-reward RL"); use the judge reward or a different base. And the judge reward needs the deployment's judge model configured; where it isn't, the launch is refused with "Judge-scored RL is not configured on this deployment. Pick the similarity reward instead."
+- **Reinforcement learning** generates answers and trains on a score: an LLM judge grading each sample against your reference outputs, or a cheaper similarity reward. RL runs use GRPO or PPO; leave the algorithm on Auto and Belvedir picks the better fit for your reward and dataset size. The similarity reward is available for Qwen 2.5 7B Instruct and Llama 3.1 8B Instruct; Qwen 3.5 9B trains with the judge reward.
 
 ## Base models
 
-Small open models that fit a single GPU: Qwen 2.5 7B Instruct, Llama 3.1 8B Instruct, and Qwen 3.5 9B (trained on the managed fleet). Llama is gated on HuggingFace, so it asks for an HF token; the token is passed to the training sandbox only and never stored.
-
-## Runs are free right now
-
-Training runs are not billed at the moment: only inference is (routed calls, Playground calls, and hosted inference sessions). Runs are capped at 2 hours; typical runs finish well under that.
+Small open models that fit a single GPU: Qwen 2.5 7B Instruct, Llama 3.1 8B Instruct, and Qwen 3.5 9B. Llama is gated on HuggingFace, so it asks for an HF token; the token is used only for that run and never stored.
 
 ## Auto-training
 
-Instead of launching runs by hand, enable auto-training in the Training setup wizard. It triggers a new run either when enough new traces have arrived since the last run or on a fixed cadence, with a cooldown between runs. Auto runs repeat the configuration of your last completed run and are treated exactly like manual ones.
+Instead of launching runs by hand, enable auto-training in the Training setup wizard. It triggers a new run either when enough new traces have arrived since the last run or on a fixed cadence, with a cooldown between runs. Auto-training is off by default, repeats the configuration of your last completed run, and its runs are treated exactly like manual ones. Turn it off from the same wizard or with `belvedir autotrain <project> --off`.
 
 ## What you get back
 
-Method-appropriate metrics recorded on the run (train/eval loss for supervised fine-tuning, distillation loss for self-distillation, mean reward for RL), plus the LoRA adapter itself (a zip of the standard PEFT files). Every run is checked against its own baseline: a model that didn't beat the plain base model on held-out data (or whose distillation loss or reward regressed) is marked _failed_ instead of ready, with the comparison recorded on the run. Load a ready model on the base with `peft`, vLLM's `--lora-modules`, or any runtime that speaks LoRA (adapters from the Qwen 3.5 9B base target layers vLLM can't apply LoRA to, so merge them into the base weights first; the Deploy button and the playground do that for you). Or deploy it without leaving the platform: paste a Together API key on the model's row and Belvedir ships a merged copy to a scale-to-zero endpoint in your own Together account. See [Cloud Inference](/inference/hosted) for the deploy flow and its preconditions.
+Method-appropriate metrics recorded on the run (train/eval loss for supervised fine-tuning, distillation loss for self-distillation, mean reward for RL), plus the LoRA adapter itself (a zip of the standard PEFT files). Every run is checked against its own baseline: a model that didn't beat the plain base model on held-out data (or whose distillation loss or reward regressed) is marked _failed_ instead of ready, with the comparison recorded on the run.
+
+Load a ready model on the base with `peft`, vLLM's `--lora-modules`, or any runtime that speaks LoRA. Some bases (Qwen 3.5 9B) must be merged into the base weights before serving, which takes longer; the Deploy button and the playground do that for you. Or deploy without leaving the platform: paste a Together API key on the model's row and Belvedir ships a merged copy to a scale-to-zero endpoint in your own Together account. See [Cloud Inference](/inference/hosted) for the deploy flow.
 
 ## Run inference
 
-Every finished model has a _Run inference_ button on the Models page. It boots a GPU sandbox serving the base model with your adapter attached and opens a chat panel against it, so you can try the model before wiring it into anything. A session reserves \$2.00 and settles to the GPU time actually used, with the unused part refunded when it ends. Warm-up ranges from a few minutes to about 25 for bases whose adapters must be merged into the weights first; the session shuts down automatically after 60 minutes.
+Every finished model has a _Run inference_ button on the Models page. It serves the base model with your adapter attached and opens a chat panel against it, so you can try the model before wiring it into anything. A test session costs about $2, settled to the time actually used with the rest refunded automatically, and runs for up to 60 minutes. Warm-up ranges from a few minutes to about 25 for bases whose adapters must be merged first.
+
+## Pricing and limits
+
+Training runs are not billed; only inference is, at the rates on the Pricing page. Runs are capped at 2 hours; typical runs finish well under that.

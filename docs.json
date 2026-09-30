@@ -21,52 +21,48 @@
         "tab": "Documentation",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Get started",
             "pages": [
               "index",
               "quickstart",
+              "sdk/python",
               "how-it-works"
             ]
           },
           {
-            "group": "SDK",
+            "group": "Instrument your app",
             "pages": [
               "sdk/installation",
               "sdk/configuration",
               "sdk/supported-providers",
-              "sdk/python",
-              "guides/environment-variables"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
+              "guides/environment-variables",
               "guides/nextjs",
-              "guides/ai-sdk",
               "guides/vercel",
+              "guides/ai-sdk",
               "guides/vercel-ai-gateway",
-              "guides/otel-agents",
               "guides/custom-agent-loops",
               "guides/background-workers",
-              "inference/local-models",
-              "inference/hosted",
+              "guides/otel-agents",
               "importing-traces"
             ]
           },
           {
             "group": "Inference",
             "pages": [
+              "inference/route-your-calls",
               "inference/mixture-of-models",
               "inference/models",
               "inference/playground",
+              "inference/hosted",
+              "inference/local-models",
               "inference/capabilities"
             ]
           },
           {
             "group": "Training",
             "pages": [
-              "training/optimization-loops",
-              "training/overview"
+              "training/overview",
+              "training/optimization-loops"
             ]
           },
           {
@@ -82,7 +78,7 @@
               "cli",
               "data-handling",
               "troubleshooting/common-issues",
-              "troubleshooting/faq"
+              "migrating-from-fractal"
             ]
           }
         ]
@@ -98,11 +94,20 @@
             ]
           },
           {
-            "group": "Endpoints",
+            "group": "Tracing",
             "pages": [
               "api-reference/traces",
-              "api-reference/outcomes",
-              "api-reference/route"
+              "api-reference/outcomes"
+            ]
+          },
+          {
+            "group": "Inference",
+            "pages": [
+              "api-reference/route",
+              "api-reference/chat-completions",
+              "api-reference/messages",
+              "api-reference/embeddings",
+              "api-reference/batches"
             ]
           }
         ]
@@ -121,5 +126,11 @@
       "label": "Dashboard",
       "href": "https://platform.belvedir.ai"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/troubleshooting/faq",
+      "destination": "/troubleshooting/common-issues"
+    }
+  ]
 }

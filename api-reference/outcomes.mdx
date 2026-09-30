@@ -10,7 +10,7 @@ Reports whether a session actually worked, from a signal only your app has: the 
 - **Body**: `{ "session_id": "...", "outcome": "success" | "fail" }` (16 KB max). `session_id` is truncated to 200 characters, so a longer id will not match the session it was meant for.
 - **Scope**: a project key may report on any of the project's sessions; the per-run key a benchmark run mints may only report on sessions from its own run.
 
-Reported ground truth beats the segmenter's judgment, asymmetrically: a `fail` overrides the session's tasks to fail, so bad sessions drop out of training data and environments everywhere task outcomes are read, while a `success` is stored on the session only (it never promotes tasks the segmenter judged failed).
+Reported ground truth beats Belvedir's own judgment of the session, asymmetrically: a `fail` overrides the session's tasks to fail, so bad sessions drop out of training data and environments everywhere task outcomes are read, while a `success` is stored on the session only (it never promotes tasks Belvedir judged failed).
 
 <Warning>
 A report for a session the platform hasn't seen yet returns 404; call `flush()` first so the session's spans have arrived.

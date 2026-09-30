@@ -1,0 +1,71 @@
+---
+title: "Route Your Calls"
+sidebarTitle: "Route Your Calls"
+description: "Point your existing OpenAI-compatible or Anthropic client at Belvedir with your Belvedir key. Two lines change; each call keeps the model it already names."
+---
+
+Belvedir can execute your LLM calls. Point your client at Belvedir and use your Belvedir key in place of the provider key. Two lines change; the client works exactly as before.
+
+## OpenAI-compatible clients
+
+Set the base URL to `https://platform.belvedir.ai/api/v1/route` and the key to your `bv_live_` key.
+
+```ts
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://platform.belvedir.ai/api/v1/route",
+  apiKey: process.env.BELVEDIR_API_KEY, // was OPENAI_API_KEY
+});
+
+const res = await client.chat.completions.create({
+  model: "x-ai/grok-4.6", // unchanged: the model this call already used
+  messages,
+});
+```
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://platform.belvedir.ai/api/v1/route",
+    api_key=os.environ["BELVEDIR_API_KEY"],  # was OPENAI_API_KEY
+)
+
+res = client.chat.completions.create(
+    model="anthropic/claude-sonnet-5",  # unchanged
+    messages=messages,
+)
+```
+
+Do this for every LLM client in your app. Keep the model each call already names and change only the base URL and key. OpenAI ids stay bare (`gpt-5.2`); every other provider's id is written provider-prefixed (`x-ai/grok-4.6`, `anthropic/claude-sonnet-5`). If a call site used a provider-native SDK (xAI, Google), swap it for the OpenAI client pointed at Belvedir and write the model in the prefixed spelling; bare ids are normalized too, so a missed one still routes. The full catalog is on [Available Models](/inference/models).
+
+## Anthropic SDK clients
+
+Anthropic SDK call sites do not swap to the OpenAI client. Point the Anthropic client at `https://platform.belvedir.ai/api` instead: requests pass through to the Messages API untranslated, with prompt caching, thinking, beta headers and native streaming intact. That surface is model-pinned, so routing stays with the OpenAI-shaped endpoint. Details on [Messages](/api-reference/messages).
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({
+  baseURL: "https://platform.belvedir.ai/api",
+  apiKey: process.env.BELVEDIR_API_KEY,
+});
+```
+
+## What happens
+
+The first call naming a model creates a router anchored on it, listed on the **Routers** page as "From your code". That model is the ceiling: it answers every conversational call, so people always talk to the model your code named. With **Smart routing** on (the default), cheaper tiers take the machine-shaped tasks underneath it (classification, extraction, formatting, tool loops), so you pay less when a smaller model is enough for the busywork. Turned off, every call serves exactly the model it names.
+
+Every project also has an auto router; `model: "auto"` hands a call to it outright. The response's `model` field tells you what actually ran, and the `x-belvedir-*` response headers say why. How routers, tiers and **Automatic updates** work is on [Model Routing](/inference/mixture-of-models).
+
+## Billing
+
+Belvedir runs the call and bills your organization per token at the rates on the Pricing page (**Inference → Pricing**), attributed to the calling API key. Every response carries `usage.cost`, the amount billed for that call.
+
+## Next steps
+
+- [Model Routing](/inference/mixture-of-models): tiers, task-group routes, **Smart routing** and **Automatic updates**.
+- [Available Models](/inference/models): every model and its identifier.
+- [Capabilities and Limits](/inference/capabilities): what each surface supports and every hard limit.
+- [Chat completions](/api-reference/chat-completions): the full request and response contract.

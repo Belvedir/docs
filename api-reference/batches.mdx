@@ -1,0 +1,118 @@
+---
+title: "/api/v1/route/batches: Batch Inference"
+sidebarTitle: "/route/batches"
+description: "Submit up to 100,000 requests at the batch rate, poll for status, stream results as JSONL, cancel in flight, and submit large batches by upload."
+---
+
+For offline work (classification, evals, backfills, summarizing a corpus) Belvedir runs a deferred **batch tier** behind one endpoint, in the same OpenAI chat-completions shape the router speaks, with results within 24 hours. Batches bill at the batch rate: half the router's per-token rate for Anthropic and OpenAI models, and a deferred rate for the hosted open models with a batch tier; the Pricing page lists every batch rate under **Batch inference**. Batches are not routed: every request names its model.
+
+## Create a batch
+
+`POST /api/v1/route/batches` with `{"requests": [...]}`. Each request carries a unique `custom_id` (1 to 64 characters) and a `body` in the OpenAI chat-completions shape: messages, tools, `response_format` with a JSON schema, images (base64 data URLs included). Streaming is not supported.
+
+```bash
+curl -X POST https://platform.belvedir.ai/api/v1/route/batches \
+  -H "Authorization: Bearer $BELVEDIR_API_KEY" -H "Content-Type: application/json" \
+  -d '{"requests":[
+    {"custom_id":"doc-1","body":{"model":"anthropic/claude-sonnet-5","max_tokens":300,
+      "messages":[{"role":"user","content":"Summarize: ..."}]}},
+    {"custom_id":"doc-2","body":{"model":"gpt-5.2",
+      "messages":[{"role":"user","content":"Summarize: ..."}]}}
+  ]}'
+# → {"id":"<batch-id>","object":"batch","status":"in_progress","request_count":2,
+#    "providers":[{"provider":"anthropic","status":"in_progress","request_count":1},
+#                 {"provider":"openai","status":"in_progress","request_count":1}], ...}
+```
+
+Requests to Anthropic models are translated to the Messages API on the way in (`cache_control` markers and a `thinking` config on the body survive the translation) and results are translated back, so every result is an OpenAI `chat.completion` regardless of provider. One batch can mix providers; it is split per provider upstream and returned as one result list.
+
+**Anthropic-native shape**: a request may send `{"custom_id", "params"}` instead of `{"custom_id", "body"}`: the same wire shape Anthropic's own Message Batches API takes, forwarded verbatim (`cache_control`, `thinking`, native content blocks intact). That request's result carries the **native Anthropic message** instead of a translated `chat.completion`. The two shapes can mix in one batch. Native `params` are accepted for Anthropic models and the hosted open models with a batch tier, not for OpenAI ids, and they refuse every Anthropic server tool, web search included.
+
+**Idempotency**: pass a top-level `idempotency_key` (up to 128 characters, unique per project) with the submission. A retried submit (a network timeout, a crashed script) returns the existing batch instead of creating and paying for a second one.
+
+## Models and caps
+
+| Provider | Identifiers | Requests per batch |
+| --- | --- | --- |
+| Anthropic | `anthropic/*` | 100,000 |
+| OpenAI | `gpt-*`, `openai/*` | 50,000 |
+| Hosted open models with a batch tier | `zai-org/GLM-5.2-FP8`, `moonshotai/Kimi-K2.6`, `google/gemma-4-31B-it` | 1,000, and about 2 MB serialized, whichever comes first |
+
+Every model in a batch must be a priced model (the Pricing page lists them; an unpriced id, `"auto"`, or a model without a batch tier is refused with `400` at submit). A batch naming a Chinese-lab model on a project with **Chinese models** off is refused with `403` at submit. The catalog is on [Available Models](/inference/models).
+
+## Large submissions
+
+Inline request bodies cap at 4 MB per request (`413` beyond it). For submissions over 4 MB, use the upload flow:
+
+1. `POST /api/v1/route/batches/uploads` returns `201` with `{object, upload_url, expires_in_seconds}`.
+2. `PUT` the full submission JSON (`{"requests": [...]}`) to `upload_url` with `Content-Type: application/json`.
+3. `POST /api/v1/route/batches` with `{"input_object": "<object>"}` (plus `idempotency_key` if you use one).
+
+Validation, reservation and the response are identical to an inline submission. The signed `upload_url` is valid for 2 hours (`expires_in_seconds: 7200`); an object uploaded but never submitted is purged after 48 hours. Upload requests share the submission rate limit.
+
+## Status
+
+`GET /api/v1/route/batches/{id}` refreshes the batch and, once every provider portion has ended, stores the results. Most batches finish in minutes; the providers guarantee 24 hours, and a batch you stop polling still completes on its own. The status object carries `status`, `request_count`, the per-provider `providers` array, `succeeded_count` / `errored_count` (plus `canceled_count` / `expired_count` when relevant), `created_at`, `ended_at`, and a `results_url` once results are ready. A partial failure runs the surviving provider portions and reports the failed portion, with its error, on the status.
+
+```bash
+curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id> \
+  -H "Authorization: Bearer $BELVEDIR_API_KEY"
+```
+
+## Results
+
+`GET /api/v1/route/batches/{id}/results` returns JSONL by default: one result object per line, in any order, parseable in constant memory at any batch size (`409` while the batch is still in progress). The batch id and status ride the `x-belvedir-batch-id` / `x-belvedir-batch-status` headers, and `x-belvedir-results-format` stamps the format served.
+
+```bash
+curl https://platform.belvedir.ai/api/v1/route/batches/<batch-id>/results \
+  -H "Authorization: Bearer $BELVEDIR_API_KEY"
+# → {"custom_id":"doc-1","status":"succeeded","model":"anthropic/claude-sonnet-5","cost":0.00021,"response":{...}}
+# → {"custom_id":"doc-2","status":"errored","response":null,"error":{"message":"..."}}
+```
+
+Code migrated from a provider's own batch API keeps its results parser:
+
+- `?format=anthropic`: Anthropic's exact results JSONL (batches submitted entirely as native `params`).
+- `?format=openai`: OpenAI's exact batch-output JSONL (batches submitted entirely as OpenAI bodies).
+- `?format=json`: one `{"object":"list","batch_id":"...","status":"...","data":[...]}` envelope, for small batches.
+
+A batch that mixes shapes gets a clear `400` for the provider formats. Results are kept for 29 days after the batch ends, then purged: the results endpoint answers `410` after that, while the batch's counts and spend stay on the status endpoint. Fetch results you want to keep into your own storage.
+
+## Cancel
+
+`POST /api/v1/route/batches/{id}/cancel` forwards the cancel to the providers. Requests that already completed still return results and still bill; everything not yet run comes back `canceled` in the results list, and its reserved cost is refunded automatically. Canceling twice, or canceling an ended batch, returns the batch's current state.
+
+```bash
+curl -X POST https://platform.belvedir.ai/api/v1/route/batches/<batch-id>/cancel \
+  -H "Authorization: Bearer $BELVEDIR_API_KEY"
+```
+
+## List
+
+`GET /api/v1/route/batches` returns the project's 50 most recent batches, newest first.
+
+## Anthropic SDK batch methods
+
+With the Anthropic client pointed at `baseURL: "https://platform.belvedir.ai/api"`, `client.messages.batches.create / retrieve / results / cancel / list / delete` run against `/api/v1/messages/batches` unchanged. That facade speaks Anthropic's Message Batches wire shapes (batch objects with `processing_status` and `request_counts`, results as their exact JSONL, cursor pagination with `limit` / `after_id` / `before_id`) over the same batch tier: same caps, pricing, cancellation semantics and 29-day retention. `DELETE /api/v1/messages/batches/{id}` removes an ended batch and its stored results outright, so later retrieves `404`.
+
+The facade honors the `Idempotency-Key` request header the Anthropic SDKs send automatically and reuse across their built-in retries (up to 255 characters of letters, digits, `_ . : -`; a body `idempotency_key` works too), so an SDK `batches.create` that times out and retries returns the same batch rather than submitting twice. Pass `idempotencyKey` in the SDK's request options to set it yourself.
+
+Inline SDK submissions cap at 4 MB like any other request; the facade also accepts `{"input_object": "<object>"}` from the [upload flow](#large-submissions) for larger submissions.
+
+## Billing
+
+Batches bill at the batch rate when they end, attributed to the calling API key and shown as "Router (batch)" on the usage page. The batch's estimated cost (request text plus `max_tokens` at the batch rate) is reserved against your organization's balance when you submit and settled when the batch ends, so concurrent batches can never overspend one balance. A balance that cannot cover the estimate returns `402` with the estimate: add credits or split the batch. A pay-as-you-go organization whose balance cannot cover the estimate proceeds without a reservation.
+
+There is no silent fallback to synchronous calls: a failed batch fails at the batch rate or not at all. A submission whose every provider portion is refused returns `502` with the provider's error and refunds the reservation in full. Nothing is billed until results are stored, so an interrupted poll cannot double-bill.
+
+## Limits and errors
+
+| Limit | Value |
+| --- | --- |
+| Submissions and upload requests | 30 per minute per API key, burst 30 (`429`) |
+| Status polls | 60 per minute per API key, burst 120 (`429`); results reads are not limited |
+| `custom_id` | 1 to 64 characters, unique within the batch |
+| `idempotency_key` | up to 128 characters, unique per project |
+| Inline body | 4 MB per request (`413`); larger submissions go through the upload flow |
+
+When batch capacity is momentarily full, submission returns a retryable `503`; retry after the `Retry-After` header. The one-page summary of every inference limit is on [Capabilities and Limits](/inference/capabilities).

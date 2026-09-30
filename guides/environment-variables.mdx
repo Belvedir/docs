@@ -8,16 +8,26 @@ The SDK itself only reads what you pass to `initialize()`. In practice most apps
 
 | Variable | Maps to | Notes |
 | --- | --- | --- |
-| `BELVEDIR_API_KEY` | `apiKey` | Required. Starts with `bv_live_` (legacy `fr_live_` keys remain valid). |
+| `BELVEDIR_API_KEY` | `apiKey` | Required. Starts with `bv_live_`. |
 | `BELVEDIR_BASE_URL` | `baseUrl` | Optional. Defaults to `https://platform.belvedir.ai`. |
+
+Still holding an `fr_live_` key or `FRACTAL_*` variables? See [Migrating from Fractal](/migrating-from-fractal).
 
 ## Plugin variables (read directly)
 
-The [OpenClaw and Hermes plugins](/guides/otel-agents) are configured environment-first and, unlike the SDK, read these variables themselves: `BELVEDIR_API_KEY`, `BELVEDIR_ENDPOINT`, `BELVEDIR_PRIVACY_MODE`, `BELVEDIR_CAPTURE_SENDER`, and `BELVEDIR_DEBUG` (stderr diagnostics when traces don't arrive). Mind the URL shape: `BELVEDIR_ENDPOINT` is the **full ingest URL** (`https://platform.belvedir.ai/api/v1/traces`), not a base URL like the SDK's `BELVEDIR_BASE_URL`.
+The [OpenClaw and Hermes plugins](/guides/otel-agents) are configured environment-first and, unlike the SDK, read these variables themselves:
 
-## Benchmark harness variables
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `BELVEDIR_API_KEY` | required | Your project API key (`bv_live_...`). |
+| `BELVEDIR_ENDPOINT` | `https://platform.belvedir.ai/api/v1/traces` | The **full ingest URL**, not a base URL like the SDK's `BELVEDIR_BASE_URL`. |
+| `BELVEDIR_PRIVACY_MODE` | `false` | Strip prompt, response, and tool content; keep models, usage, and structure. |
+| `BELVEDIR_CAPTURE_SENDER` | `false` | Stamp the chat sender id as `user.id`. |
+| `BELVEDIR_DEBUG` | `false` | Print stderr diagnostics when traces don't arrive. |
 
-If your code runs inside a Belvedir [benchmark](/benchmarks/overview) sandbox, extra variables are injected at run time: `BELVEDIR_API_KEY` (a per-run ingest key), `BELVEDIR_BASE_URL`, `BELVEDIR_RUN_ID`, and `BELVEDIR_TASKS_FILE` when the harness has a custom task set. The legacy `FRACTAL_*` names are also set as aliases for older drivers. The SDK does **not** read them automatically; pass them to `initialize()` and use `BELVEDIR_RUN_ID` as the `sessionId`.
+## Benchmark runs
+
+Inside a Belvedir benchmark run these variables are preset for you, along with the run id and task file the harness contract defines; see [Benchmarks](/benchmarks/overview). The SDK does not read them automatically: pass them to `initialize()`.
 
 ## Local development
 
@@ -46,5 +56,9 @@ Set the vars in `.env.local` (Next.js) or in your shell. The shell syntax depend
 </Tabs>
 
 `.env` files work the same on every OS (`BELVEDIR_API_KEY=bv_live_...`, no `export`), so they're the most portable option for a team on mixed machines.
+
+## Vercel and other hosts
+
+On Vercel, add `BELVEDIR_API_KEY` under your project's **Environment Variables** and redeploy; other hosts work the same way through their own secrets settings. Vercel-specific runtime and flush rules are in the [Vercel guide](/guides/vercel).
 
 If traces aren't arriving, check your terminal for SDK warnings on startup and verify `BELVEDIR_API_KEY` is loaded before `initialize()` runs.

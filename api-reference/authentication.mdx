@@ -4,7 +4,7 @@ sidebarTitle: "Authentication"
 description: "Learn how to authenticate requests to the Belvedir API using your API key via the Authorization Bearer header or the x-api-key header."
 ---
 
-All API requests require your Belvedir API key. Keys start with `bv_live_` (legacy `fr_live_` keys remain valid) and are shown once at creation; store them securely.
+All API requests require your Belvedir API key. Keys start with `bv_live_` and are shown once at creation; store them securely. Keys belong to the project: create and revoke them on the **API Keys** page. If you still hold a key from before the Belvedir rename, see [Migrating from Fractal](/migrating-from-fractal).
 
 ## Bearer token
 
@@ -21,3 +21,11 @@ curl https://platform.belvedir.ai/api/v1/traces \
 ```
 
 Both headers are accepted. Choose whichever fits your HTTP client.
+
+## Anthropic SDK clients
+
+The Anthropic SDK sends `x-api-key` when you set `apiKey` (or `ANTHROPIC_API_KEY`) and `Authorization: Bearer` when you set `authToken` (or `ANTHROPIC_AUTH_TOKEN`); Belvedir accepts either, so both env vars work as the key carrier with `ANTHROPIC_BASE_URL=https://platform.belvedir.ai/api`. See [Messages](/api-reference/messages).
+
+## Other credentials
+
+CLI sessions and benchmark runs do not use your project key directly. `belvedir login` signs you in as your user through a device-approval flow (add `--readonly` for a session that can only read), and a benchmark run mints keys scoped to that run, so its traces and outcome reports can only touch the run's own sessions.

@@ -1,0 +1,35 @@
+---
+title: "POST /api/v1/route/embeddings: OpenAI-Compatible Embeddings"
+sidebarTitle: "POST /route/embeddings"
+description: "Create OpenAI text embeddings through Belvedir with your Belvedir key. Model-pinned, metered per input token, cost on every response."
+---
+
+`embeddings.create` against the router base URL runs OpenAI's embedding models on Belvedir's account with your `bv_live_` key. The same client you use for [chat completions](/api-reference/chat-completions) works unchanged.
+
+```ts
+const router = new OpenAI({
+  baseURL: "https://platform.belvedir.ai/api/v1/route",
+  apiKey: process.env.BELVEDIR_API_KEY,
+});
+const res = await router.embeddings.create({
+  model: "text-embedding-3-small",
+  input: ["first document", "second document"],
+});
+```
+
+## Request
+
+- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
+- **Body**: a standard OpenAI embeddings body (`model`, `input`, and the optional `dimensions` and `encoding_format`). Bodies cap at 4 MB (`413` beyond it).
+
+## Models
+
+Any `text-embedding-*` id is accepted, with or without the `openai/` prefix, but an unpriced one is refused with `400`. The priced ids are `text-embedding-3-small`, `text-embedding-3-large`, and `text-embedding-ada-002`. Embeddings are model-pinned: there is nothing to route, and `"auto"` is not accepted.
+
+## Cost
+
+Input tokens are metered like every routed call, at the rates on the Pricing page (**Inference → Pricing**), attributed to the calling API key. The cost of the call rides the `x-belvedir-cost` response header.
+
+## Limits
+
+The `402` spend gate and the rate limit (25 requests per second per API key, burst 300, adjustable per organization) are the same as on [chat completions](/api-reference/chat-completions#errors). The full table is on [Capabilities and Limits](/inference/capabilities).
