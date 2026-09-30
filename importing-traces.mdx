@@ -61,10 +61,10 @@ imp.import_conversations(
 
 ## What to expect
 
-Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history (LangChain message encodings and raw OpenAI chat completions, what LangSmith's `wrap_openai` stores, both count, and an assistant turn that only calls tools is kept as `[tool_call] name(arguments)` rather than dropped), tool runs keep their names, and errors keep their status, so failure signals and optimization treat imported sessions like live ones. Tasks appear once the imported session goes quiet; see [How it works](/how-it-works).
+Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history in every encoding the sources store: LangChain messages and `LLMResult` outputs (what LangChain and LangGraph runs in LangSmith carry), raw OpenAI chat completions (what `wrap_openai` stores), Responses API items, Anthropic content blocks, Gemini, and the AI SDK. An assistant turn that only calls tools is kept as `[tool_call] name(arguments)` rather than dropped. Tool runs keep their names, inputs, and outputs; LLM runs keep their token counts; errors keep their status, so failure signals, usage graphs, and optimization treat imported sessions like live ones. Tasks appear once the imported session goes quiet; see [How it works](/how-it-works).
 
-<Warning>
-Re-importing the same conversation duplicates its spans, so import once.
-</Warning>
+<Note>
+Dashboard imports skip spans the project already holds, so importing a conversation twice, or resuming an interrupted import, doesn't double it. The shell and Python importers post through the ingest API, which has no such check, so import a conversation once from there.
+</Note>
 
-Dashboard imports have two bounds: an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). A conversation that fails is listed with its reason at the top of **Import Data** and the import moves on, so check the per-conversation failures and counts there when the totals look short.
+Dashboard imports have two bounds: an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). A conversation that fails is listed with its reason at the top of **Import Data** and the import moves on, so check the per-conversation failures and counts there when the totals look short. If the source stops accepting the credentials partway through, the import stops with that message instead of failing every remaining conversation; fix the key and start a new import for the rest. Long imports run in chunks and resume within a minute between them.
