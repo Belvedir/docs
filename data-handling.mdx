@@ -13,6 +13,8 @@ The answers security reviews ask for, in one place: what Belvedir keeps, which m
 - **Batch inference results are retained for 29 days** after a batch ends, then purged (the batch's counts and spend remain). To remove results sooner, delete the ended batch with `DELETE /api/v1/messages/batches/{id}`; it accepts any ended batch of the project, whichever endpoint created it. `/api/v1/route/batches` has no delete of its own. See [Batches](/api-reference/batches).
 - **Routed and passthrough inference is metered, not traced.** Belvedir records the model, token counts, and cost for billing. Inference traffic only appears as traces if you instrument your app with the SDK and export spans; the two are independent.
 
+- **Daily graphs follow your time zone; billing follows UTC.** The dashboard cuts its per-day graphs (Home, Usage, Billing, Validation) into calendar days in your time zone, detected from your device or set under **Account → Time zone**. Each graph says which zone it is using. Usage is metered and charged hourly in UTC, so billing periods never move with the viewer.
+
 ## Which models can touch a project's data
 
 - **Serving is constrained by enumeration.** The router only ever picks models named in the project's routing config: the Default, Big, and Small tiers, per-task-group assignments, and, with **Automatic updates** on, the model Belvedir recommends for a task group (see [Mixture of models](/inference/mixture-of-models)). Turning **Smart routing** off narrows further: every call is served exactly the model it names, with no substitution ever. There is no separate provider-allowlist policy; you constrain the model set by what you put in the config and what your code names.
