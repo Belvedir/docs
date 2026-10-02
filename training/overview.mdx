@@ -10,7 +10,7 @@ Training compute is your choice in the setup wizard: the **managed fleet** (the 
 
 ## What it trains on
 
-Successful tasks that captured both an input and an output, shown as the example count on the Training page. **One in five tasks is held out for evaluation; training never sees them.** Those held-out tasks are what [generated environments](/benchmarks/environments) score against, so an environment run never measures a model on its own training data. You can train on everything the agent does well, or pick a single task group to distill one kind of work into a specialist.
+Successful tasks that captured both an input and an output, shown as the example count on the Training page. **One in five tasks is held out for evaluation; training never sees them.** Those held-out tasks are what [generated environments](/benchmarks/environments) score against, so an environment run never measures a model on its own training data. You can train on everything the agent does well, or pick a single task group to distill one kind of work into a specialist. The **Training Sets** page (Data section, below Task Groups) shows exactly what a run on each task group would see: the group's successful tasks minus the held-out fifth, tasks that errored or showed frustration, exact duplicates, and tasks unusually short or long for the group. Open a set to browse its examples.
 
 Training needs at least 200 examples; keep sending traces until you cross the floor. Datasets are capped at 1,000 examples; the newest eligible tasks win. Sessions you report as `"fail"` through [outcomes](/api-reference/outcomes) are excluded.
 
