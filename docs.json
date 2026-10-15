@@ -30,16 +30,18 @@
             ]
           },
           {
-            "group": "Instrument your app",
+            "group": "Node SDK",
             "pages": [
               "sdk/installation",
               "sdk/configuration",
-              "sdk/supported-providers",
-              "guides/environment-variables",
+              "sdk/supported-providers"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
               "guides/nextjs",
-              "guides/vercel",
               "guides/ai-sdk",
-              "guides/vercel-ai-gateway",
               "guides/custom-agent-loops",
               "guides/background-workers",
               "guides/otel-agents",
@@ -50,26 +52,27 @@
             "group": "Inference",
             "pages": [
               "inference/route-your-calls",
-              "inference/mixture-of-models",
               "inference/models",
+              "inference/mixture-of-models",
+              "inference/capabilities",
               "inference/playground",
               "inference/hosted",
-              "inference/local-models",
-              "inference/capabilities"
+              "inference/local-models"
             ]
           },
           {
             "group": "Training",
             "pages": [
-              "training/overview",
-              "training/optimization-loops"
+              "training/optimization-loops",
+              "training/overview"
             ]
           },
           {
             "group": "Benchmarks",
             "pages": [
               "benchmarks/overview",
-              "benchmarks/environments"
+              "benchmarks/environments",
+              "benchmarks/harbor"
             ]
           },
           {
@@ -103,11 +106,11 @@
           {
             "group": "Inference",
             "pages": [
-              "api-reference/route",
               "api-reference/chat-completions",
               "api-reference/messages",
               "api-reference/embeddings",
-              "api-reference/batches"
+              "api-reference/batches",
+              "api-reference/route"
             ]
           }
         ]
@@ -131,6 +134,18 @@
     {
       "source": "/troubleshooting/faq",
       "destination": "/troubleshooting/common-issues"
+    },
+    {
+      "source": "/guides/vercel",
+      "destination": "/guides/nextjs"
+    },
+    {
+      "source": "/guides/vercel-ai-gateway",
+      "destination": "/guides/ai-sdk"
+    },
+    {
+      "source": "/guides/environment-variables",
+      "destination": "/sdk/configuration"
     }
   ]
 }

@@ -1,10 +1,10 @@
 ---
-title: "Belvedir REST API Reference: Inference, Traces, and Outcomes"
+title: "API reference"
 sidebarTitle: "Overview"
 description: "The Belvedir REST API: run inference through an OpenAI-compatible or Anthropic-native endpoint, submit batches, ingest OpenTelemetry traces, report ground-truth outcomes, and authenticate requests."
 ---
 
-The Belvedir REST API has two halves. The **inference** endpoints run your LLM calls: point an OpenAI-compatible or Anthropic client at Belvedir with your Belvedir key and each call is routed, metered and billed per token. The **tracing** endpoints receive OpenTelemetry spans and ground-truth outcomes; the SDK calls those for you, and any stock OpenTelemetry exporter can target them too.
+The **inference** endpoints run your LLM calls: point an OpenAI-compatible or Anthropic client at Belvedir with your Belvedir key and each call is metered and billed per token. The **tracing** endpoints receive OpenTelemetry spans and ground-truth outcomes; the SDK calls those for you, and any stock OpenTelemetry exporter can target them too.
 
 - **Base URL**: `https://platform.belvedir.ai`
 - **Authentication**: API key via `Authorization: Bearer` or `x-api-key` header. See [Authentication](/api-reference/authentication).
@@ -14,7 +14,7 @@ The Belvedir REST API has two halves. The **inference** endpoints run your LLM c
 | Endpoint | What it does |
 | --- | --- |
 | [`POST /api/v1/route/chat/completions`](/api-reference/chat-completions) | OpenAI-compatible chat completions, routed or anchored on the model your code names |
-| [`POST /api/v1/messages`](/api-reference/messages) | The Anthropic Messages API, passed through untranslated |
+| [`POST /api/v1/messages`](/api-reference/messages) | The Anthropic Messages API, passed through unchanged |
 | [`POST /api/v1/route/embeddings`](/api-reference/embeddings) | OpenAI-compatible embeddings |
 | [`/api/v1/route/batches`](/api-reference/batches) | Batch inference: create, list, status, results, cancel, and `/uploads` for large submissions; the Anthropic SDK facade at `/api/v1/messages/batches` is on the same page |
 | [`POST /api/v1/route`](/api-reference/route) | A routing decision without execution, for calls your own code runs |

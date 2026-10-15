@@ -1,12 +1,10 @@
 ---
-title: "Tracing AI SDK Apps (Vercel AI SDK)"
-sidebarTitle: "AI SDK"
-description: "Instrument an app built on the AI SDK (the ai package) so every generateText and streamText call is traced by Belvedir, and optionally routed through it."
+title: "AI SDK and Vercel AI Gateway"
+sidebarTitle: "AI SDK and AI Gateway"
+description: "Trace an app built on the AI SDK (the ai package), including calls that go through the Vercel AI Gateway, and optionally route them through Belvedir."
 ---
 
-Apps built on the [AI SDK](https://ai-sdk.dev) (the `ai` package) work with Belvedir through one rule: **make the calls with the OpenAI-compatible provider** (`@ai-sdk/openai-compatible`). Calls made that way are captured automatically by the Belvedir SDK, streaming included; the AI SDK's native provider packages and its built-in gateway routing use protocols Belvedir doesn't instrument, and produce no LLM spans. See the [pitfall below](#pitfall-native-providers-produce-no-llm-spans).
-
-Verified with `ai@7` and `@ai-sdk/openai-compatible@3`.
+Apps built on the [AI SDK](https://ai-sdk.dev) (the `ai` package) work with Belvedir through one rule: **make the calls with the OpenAI-compatible provider** (`@ai-sdk/openai-compatible`). Calls made that way are captured automatically by the Belvedir SDK, streaming included. The AI SDK's native provider packages and its built-in gateway routing produce no LLM spans; see the [pitfall below](#pitfall-native-providers-produce-no-llm-spans).
 
 ## 1. Initialize Belvedir before importing the AI SDK
 
@@ -59,7 +57,7 @@ await withSession({ sessionId: chatId, userId: user.id }, async () => {
 await flush(); // serverless: flush before the function returns
 ```
 
-Spans arrive with the session id, model, prompt, completion, and token counts, for streamed and unstreamed calls alike. Tasks, task groups, and [outcome reporting](/api-reference/outcomes) work exactly as with any other client.
+Tasks, task groups, and [outcome reporting](/api-reference/outcomes) work exactly as with any other client.
 
 ## Pitfall: native providers produce no LLM spans
 
@@ -67,6 +65,21 @@ These three AI SDK configurations make calls on protocols Belvedir doesn't captu
 
 - `@ai-sdk/openai` (it defaults to OpenAI's Responses API)
 - `@ai-sdk/anthropic` (Anthropic's Messages API)
-- Plain `"provider/model"` model strings, which route through the [Vercel AI Gateway's](/guides/vercel-ai-gateway) native protocol
+- Plain `"provider/model"` model strings, which route through the Vercel AI Gateway's native protocol
 
-The fix is the rule at the top: swap those call sites to `createOpenAICompatible`. The same models remain available; the Vercel AI Gateway also serves an OpenAI-compatible endpoint (`https://ai-gateway.vercel.sh/v1`), so gateway users keep the gateway and just change how the AI SDK talks to it. Belvedir does not parse the AI SDK's `experimental_telemetry` spans, so telemetry is not a substitute for this swap.
+The fix is the rule at the top: swap those call sites to `createOpenAICompatible`. The same models remain available; gateway users keep the gateway through its OpenAI-compatible endpoint ([below](#through-the-vercel-ai-gateway)). Belvedir does not parse the AI SDK's `experimental_telemetry` spans, so telemetry is not a substitute for this swap.
+
+## Through the Vercel AI Gateway
+
+[Vercel AI Gateway](https://vercel.com/docs/ai-gateway) is an inference proxy, not a trace store. Keep the Belvedir SDK tracing your app as usual and make the inference calls pass through the gateway's OpenAI-compatible endpoint, with the `openai` SDK or the `@ai-sdk/openai-compatible` provider:
+
+```ts
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://ai-gateway.vercel.sh/v1",
+  apiKey: process.env.AI_GATEWAY_API_KEY,
+});
+```
+
+Spend then shows in the gateway and the traces in Belvedir. If Belvedir [routes your inference](/inference/route-your-calls) instead, that spend is billed by Belvedir and shows on its usage pages rather than in Vercel.

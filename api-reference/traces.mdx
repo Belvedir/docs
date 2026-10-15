@@ -1,20 +1,25 @@
 ---
-title: "POST /api/v1/traces: Ingest OpenTelemetry Spans"
+title: "Traces"
 sidebarTitle: "POST /traces"
-description: "Send OpenTelemetry trace data to Belvedir as OTLP over HTTP (protobuf or JSON). This endpoint powers the trace analysis dashboard and is called automatically by the SDK."
+description: "Send OpenTelemetry trace data to Belvedir as OTLP over HTTP (protobuf or JSON). The SDK calls this endpoint for you."
 ---
 
-Receives OpenTelemetry trace data over OTLP/HTTP. This is called automatically by the SDK, and any stock OpenTelemetry exporter can target it too (see [Agents without the SDK](/guides/otel-agents)).
+`POST /api/v1/traces` receives OpenTelemetry trace data over OTLP/HTTP. The SDK calls it for you, and any stock OpenTelemetry exporter can target it too (see [Agents without the SDK](/guides/otel-agents)).
 
-- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
+## Request
+
 - **Body**: an OTLP `ExportTraceServiceRequest`, either JSON (`Content-Type: application/json`, a `resourceSpans` array) or protobuf (`Content-Type: application/x-protobuf` or `application/protobuf`). `Content-Encoding: gzip` is accepted.
-- **Optional header** `x-belvedir-session-from: trace`: spans without a session id are assigned their trace id as the session, so exporters that never stamp sessions still segment into tasks. Only traces that contain an LLM span **in that request** are promoted; traces with no model call are stored but not turned into sessions. If an exporter splits one trace across export batches, only the batch carrying the LLM span is promoted; the rest of that trace's spans land without a session, so keep a trace's spans in one export where you can.
+- **Optional header** `x-belvedir-session-from: trace`: spans without a session id get their trace id as the session. Only traces that contain an LLM call become sessions, and only when the LLM span is in the same request, so keep a trace's spans in one export.
 
-Traces tagged with a session id (`withSession` in the SDK, or a `session.id` / `gen_ai.conversation.id` span attribute from other exporters) are grouped into sessions and segmented into tasks; untagged spans still land but can't be linked or segmented.
+Spans tagged with a session id (`withSession` in the SDK, or a `session.id` / `gen_ai.conversation.id` span attribute from other exporters) are grouped into sessions and segmented into tasks; untagged spans still land but are not linked or segmented.
 
-## Limits
+## Errors and limits
 
-- Request body: keep each request under 4 MB on the wire; larger bodies return `413`. `Content-Encoding: gzip` is accepted and may inflate to at most 5 MB; a gzip body that fails to inflate under that ceiling also returns `413`.
-- Up to 1,000 spans and 200 distinct sessions per request; over either returns `400` with a message naming the limit. Split into smaller batches.
-- Rate limit: 2 requests/second sustained per key with a burst of 120; over it returns `429` with a `Retry-After` header. The SDK's batching stays well under this.
-- A `402` means the project has no organization to bill to (trace ingestion itself is not billed today). Create or join an organization for the project.
+| Limit | Value |
+| --- | --- |
+| Request body | 5 MB, raw or after gzip inflation; `413` beyond it |
+| Spans per request | 1,000; `400` beyond it |
+| Distinct sessions per request | 200; `400` beyond it |
+| Rate | 2 requests per second sustained per key, burst 120; separately, 20 new session ids per second, burst 2,000. `429` with `Retry-After` beyond either |
+
+A `402` means the project has no organization to bill to; create or join one for the project. Trace ingestion itself is not billed.

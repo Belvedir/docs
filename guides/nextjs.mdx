@@ -1,7 +1,7 @@
 ---
-title: "Using Belvedir with Next.js: Setup and Initialization"
-sidebarTitle: "Next.js"
-description: "Learn how to add Belvedir tracing to your Next.js app with the correct initialization order for both server and Edge runtime environments."
+title: "Next.js and Vercel"
+sidebarTitle: "Next.js and Vercel"
+description: "Add Belvedir tracing to a Next.js app: initialization order, keeping SDKs external, the Node.js runtime, and deploying on Vercel."
 ---
 
 `initialize()` must run before your LLM SDK is imported (the rule is explained on [Installation](/sdk/installation)). In Next.js the only place that's guaranteed is the `instrumentation.ts` hook at your project root (or `src/instrumentation.ts` if you use a `src/` folder):
@@ -39,4 +39,8 @@ On Next 13/14 the key is `experimental.serverComponentsExternalPackages`; the Ne
 
 ## Use the Node.js runtime
 
-The SDK needs Node.js APIs, so a route declared with `export const runtime = "edge"` runs untraced: the logs show `initialize() failed; the app will run untraced` and no spans arrive. Use the Node.js runtime (`export const runtime = "nodejs"`, the default) for every route that makes LLM calls, and `await flush()` before the handler returns on serverless hosts; see the [Vercel guide](/guides/vercel).
+The SDK needs Node.js APIs, so a route declared with `export const runtime = "edge"` runs untraced: the logs show `initialize() failed; the app will run untraced` and no spans arrive. Use the Node.js runtime (`export const runtime = "nodejs"`, the default) for every route that makes LLM calls.
+
+## Deploying on Vercel
+
+Set `BELVEDIR_API_KEY` in your Vercel project's **Environment Variables**, then redeploy. Vercel functions can freeze or exit as soon as the response is sent, before batched spans export, so `await flush()` at the end of every handler that makes LLM calls; see [Flush on serverless](/sdk/configuration#flush-on-serverless).

@@ -1,7 +1,7 @@
 ---
-title: "Available Models"
+title: "Available models"
 description: "Every model the Belvedir router can serve, with the identifier to use in your calls and routing configs."
-sidebarTitle: "Available Models"
+sidebarTitle: "Available models"
 ---
 
 These are the models Belvedir's [inference endpoints](/api-reference/chat-completions) can execute, with the identifier you pass as `model` (or pick in a router on the **Routers** page). This is the current catalog; the Pricing page (**Inference → Pricing**) is authoritative and carries the per-token rates, so prices are not repeated here. Ids not on it bill at the provider's reported cost for that call.
@@ -12,7 +12,7 @@ Belvedir uses provider-prefixed identifiers for every provider except OpenAI, wh
 
 ## Anthropic
 
-Served on Anthropic's API. Claude models are also servable through the [Anthropic-native Messages passthrough](/api-reference/messages), which keeps prompt caching, thinking, beta headers, and native streaming intact.
+Claude models are also servable through the [Anthropic-native Messages passthrough](/api-reference/messages), which keeps prompt caching, thinking, beta headers, and native streaming intact.
 
 | Model | Identifier |
 | --- | --- |
@@ -29,11 +29,11 @@ Served on Anthropic's API. Claude models are also servable through the [Anthropi
 | Claude Opus 4.5 | `anthropic/claude-opus-4-5` |
 | Claude Sonnet 4.5 | `anthropic/claude-sonnet-4-5` |
 
-Dated snapshot ids (`claude-opus-4-5-20251101`, ...) resolve to the same rates. Claude Fable 5.1 and Claude Opus 5.5 do not accept forced tool choice and never run with thinking off; how Belvedir handles both is on [Capabilities and Limits](/inference/capabilities#what-belvedir-cannot-do).
+Dated snapshot ids (`claude-opus-4-5-20251101`, ...) resolve to the same rates. Claude Fable 5.1 and Claude Opus 5.5 do not accept forced tool choice and never run with thinking off; how Belvedir handles both is on [Capabilities and limits](/inference/capabilities#what-belvedir-cannot-do).
 
 ## OpenAI
 
-Served on OpenAI's API. Bare ids are the norm; the `openai/` prefix is also accepted. Any current OpenAI chat id (`gpt-*`, `chatgpt-*`, o-series) routes here; the priced line-up, newest first:
+Bare ids are the norm; the `openai/` prefix is also accepted. Any current OpenAI chat id (`gpt-*`, `chatgpt-*`, o-series) routes here; the priced line-up, newest first:
 
 | Model | Identifier |
 | --- | --- |
@@ -63,11 +63,11 @@ Served on OpenAI's API. Bare ids are the norm; the `openai/` prefix is also acce
 | GPT-4 | `gpt-4` |
 | GPT-3.5 Turbo | `gpt-3.5-turbo` |
 
-Dated snapshot ids and the `-chat-latest` variants resolve to the same rates. GPT-6 Astra accepts function tools only on OpenAI's Responses API, so Belvedir sends Astra tool calls there and returns the usual chat-completions shape (JSON or streamed); your OpenAI client code does not change. OpenAI's pro and codex models are served only on their Responses API, which the router doesn't speak; they return a clear error naming the base chat model (or a chat-latest variant) to use instead.
+Dated snapshot ids and the `-chat-latest` variants resolve to the same rates. OpenAI's pro and codex models are not available; they return a clear error naming the base chat model (or a chat-latest variant) to use instead.
 
 ## xAI
 
-Served on xAI's API and billed at the provider's reported cost per call. Any model xAI serves works; the current line-up:
+Billed at the provider's reported cost per call. Any model xAI serves works; the current line-up:
 
 | Model | Identifier |
 | --- | --- |
@@ -79,7 +79,7 @@ Served on xAI's API and billed at the provider's reported cost per call. Any mod
 
 ## Open models
 
-Hosted open models run on the fastest available provider that meets Belvedir's data-retention requirements. The **Batch tier** column says whether the id is accepted by [batches](/api-reference/batches).
+Hosted open models run on providers that meet Belvedir's data-retention requirements. The **Batch tier** column says whether the id is accepted by [batches](/api-reference/batches).
 
 | Model | Identifier | Batch tier |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ Hosted open models run on the fastest available provider that meets Belvedir's d
 
 Beyond this list, any open-model id in the `org/model` spelling works as a pass-through on chat completions and bills at the provider's reported cost per call. Pass-through ids have no batch tier.
 
-With **Chinese models** off under **Project Permissions**, Chinese-lab identifiers are unavailable for that project across the whole catalog, pass-through ids included; see [Data handling](/data-handling).
+With **Chinese models** off under **Project Permissions**, Chinese-lab identifiers are refused across the whole catalog, pass-through ids included; see [Data handling](/data-handling).
 
 ## Your own models
 

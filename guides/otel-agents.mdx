@@ -1,5 +1,5 @@
 ---
-title: "Trace Agents Without the SDK (OpenClaw, Hermes, Any OpenTelemetry Exporter)"
+title: "Agents without the SDK"
 sidebarTitle: "Agents without the SDK"
 description: "Point any OpenTelemetry exporter at Belvedir's OTLP/HTTP ingest endpoint. Ready-made configs for OpenClaw and Hermes Agent, plus the generic environment-variable setup."
 ---
@@ -16,7 +16,7 @@ Only traces are ingested. There are no metrics or logs endpoints, so turn those 
 
 ## OpenClaw
 
-Install our [openclaw-belvedir](https://github.com/Belvedir/openclaw-belvedir) plugin. It has zero dependencies (plain JavaScript on Node built-ins, nothing for a security scanner to flag) and, unlike OpenClaw's stock OTel exporter, it stamps OpenClaw's real session identity on every span: a multi-turn conversation becomes one Belvedir session instead of one session per turn, and OpenClaw's single-span housekeeping traces are skipped.
+Install the [openclaw-belvedir](https://github.com/Belvedir/openclaw-belvedir) plugin (zero dependencies). It stamps OpenClaw's session identity on every span, so a multi-turn conversation becomes one Belvedir session.
 
 ```bash
 openclaw plugins install https://github.com/Belvedir/openclaw-belvedir
@@ -39,7 +39,7 @@ In `~/.openclaw/openclaw.json`, then restart the Gateway (`openclaw gateway rest
 }
 ```
 
-`hooks.allowConversationAccess` is OpenClaw's consent gate for message content: without it the plugin still runs but only structure and timing arrive, and nothing can be segmented into tasks. Set `BELVEDIR_PRIVACY_MODE=true` (or `config.privacyMode`) to send usage and structure only. To confirm the wiring without spending model tokens, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session and prints the session id to look for on the Data pages. Run it from a checkout of the plugin repo:
+`hooks.allowConversationAccess` is OpenClaw's consent gate for message content: without it the plugin still runs but only structure and timing arrive, and nothing can be segmented into tasks. Set `BELVEDIR_PRIVACY_MODE=true` (or `config.privacyMode`) to send usage and structure only. To confirm the wiring without spending model tokens, run the plugin's simulator from a checkout of the repo; it sends a two-turn session and prints the session id to look for on the Data pages:
 
 ```bash
 git clone https://github.com/Belvedir/openclaw-belvedir && cd openclaw-belvedir
@@ -48,7 +48,7 @@ BELVEDIR_API_KEY=bv_live_... node tests/simulate-run.js
 
 ## Hermes Agent
 
-Install our [hermes-belvedir](https://github.com/Belvedir/hermes-belvedir) plugin. It has zero Python dependencies: nothing to `pip install`, no dependency tree for a security scanner to flag, and few enough lines to review before enabling, as Hermes' security policy asks. It stamps `session.id` on every span, so multi-turn Hermes sessions become Belvedir sessions as-is.
+Install the [hermes-belvedir](https://github.com/Belvedir/hermes-belvedir) plugin (zero Python dependencies). It stamps `session.id` on every span, so multi-turn Hermes sessions become Belvedir sessions as-is.
 
 ```bash
 hermes plugins install Belvedir/hermes-belvedir
@@ -57,13 +57,23 @@ hermes plugins enable hermes_belvedir
 export BELVEDIR_API_KEY=bv_live_...
 ```
 
-That's the whole setup. Each turn appears within seconds: the conversation the model saw, its replies, tool calls with results, and token usage per request. Full prompts and responses are captured by default; set `BELVEDIR_PRIVACY_MODE=true` to send usage and structure only. Both plugins are configured environment-first (the variables are listed under [Plugin variables](/guides/environment-variables#plugin-variables-read-directly)), with an optional `config.json` next to the installed plugin.
-
-To confirm the wiring without running the agent, the plugin ships a simulator that fires the exact hook sequence of a real two-turn session:
+Full prompts and responses are captured by default; set `BELVEDIR_PRIVACY_MODE=true` to send usage and structure only. To confirm the wiring without running the agent, run the plugin's simulator; it sends a two-turn session:
 
 ```bash
 BELVEDIR_API_KEY=bv_live_... python3 ~/.hermes/plugins/hermes_belvedir/tests/simulate_session.py
 ```
+
+## Plugin variables
+
+Both plugins read these variables from the agent's environment (an optional `config.json` next to the installed plugin works too):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `BELVEDIR_API_KEY` | required | Your project API key (`bv_live_...`). |
+| `BELVEDIR_ENDPOINT` | `https://platform.belvedir.ai/api/v1/traces` | The **full ingest URL**, not a base URL like the SDK's `BELVEDIR_BASE_URL`. |
+| `BELVEDIR_PRIVACY_MODE` | `false` | Strip prompt, response, and tool content; keep models, usage, and structure. |
+| `BELVEDIR_CAPTURE_SENDER` | `false` | Stamp the chat sender id as `user.id`. |
+| `BELVEDIR_DEBUG` | `false` | Print stderr diagnostics when traces don't arrive. |
 
 ## Any other OpenTelemetry SDK
 

@@ -1,6 +1,6 @@
 ---
-title: "Importing Traces"
-sidebarTitle: "Importing Traces"
+title: "Importing traces"
+sidebarTitle: "Importing traces"
 description: "Bring trace history over from LangSmith, Langfuse, Phoenix, Braintrust, PostHog, Mastra, or a CSV/JSONL/JSON file."
 ---
 
@@ -8,13 +8,11 @@ Already tracing with another observability platform? Import that history instead
 
 ## 1. From the dashboard
 
-**Data → Import Data** connects to LangSmith, Langfuse, Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick. The import runs in the background: you can leave the page, and progress (with a **Cancel** button and per-conversation failures) shows at the top of **Import Data**. Credentials are encrypted for the length of the import and deleted when it finishes; self-hosted deployments need a public https URL.
+**Data → Import Data** connects to LangSmith, Langfuse (Cloud and self-hosted, including older deployments), Phoenix, Braintrust, PostHog, and Mastra directly: paste the provider's API credentials, preview the recent conversations, and import the ones you pick. The import runs in the background: you can leave the page, and progress (with a **Cancel** button and per-conversation failures) shows at the top of **Import Data**. Credentials are encrypted for the length of the import and deleted when it finishes; self-hosted deployments need a public https URL.
 
 Or upload a CSV / JSONL / JSON file of conversations: OpenAI-style `{"messages": [...]}` lines, input/output exchange rows, or role+content CSV columns are detected automatically.
 
 Imported conversations are labeled by source ("LangSmith", "PostHog", "File import", and so on) rather than by an API key: pick that label in the API key filter on the Data pages, or as a data source in the training wizard, to work with just the imported data. No API key is created for an import.
-
-Langfuse imports read the v2 observations API, so they keep working on Langfuse Cloud after Langfuse removes its v3 read endpoints (November 16, 2026) and on self-hosted Langfuse v4. Older self-hosted deployments without the v2 API are read through the legacy endpoints automatically.
 
 ## 2. Or from the shell
 
@@ -57,14 +55,14 @@ imp.import_conversations(
 )
 ```
 
-`import_conversations` looks for the ids within the most recent conversations (its `limit`, default 20). If you picked ids from a deeper `list_conversations(limit=...)` call, pass the same `limit` to `import_conversations` or it raises `LangSmithImportError` for the older ones. For local files, `FileImporter(path)` in `belvedir.importers.files` has the same `list_conversations(limit=...)`, but its `import_conversations(belvedir_api_key=..., limit=...)` takes no ids: it imports the whole file, capped by `limit` if you pass one. Both importers also accept `belvedir_base_url=` (the `--base-url` flag's equivalent). Scripts written against the old `belvedir_loop` import paths: see [Migrating from Fractal](/migrating-from-fractal).
+`import_conversations` looks for the ids within the most recent conversations (its `limit`, default 20): if you picked ids from a deeper `list_conversations(limit=...)` call, pass the same `limit` to `import_conversations` or it raises `LangSmithImportError` for the older ones. `FileImporter(path)` in `belvedir.importers.files` works the same way, except that `import_conversations(belvedir_api_key=..., limit=...)` takes no ids and imports the whole file; both importers accept `belvedir_base_url=`. Scripts written against the old `belvedir_loop` import paths: see [Migrating from Fractal](/migrating-from-fractal).
 
 ## What to expect
 
-Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). LLM runs keep their full message history in every encoding the sources store: LangChain messages and `LLMResult` outputs (what LangChain and LangGraph runs in LangSmith carry), raw OpenAI chat completions (what `wrap_openai` stores), Responses API items, Anthropic content blocks, Gemini, and the AI SDK. An assistant turn that only calls tools is kept as `[tool_call] name(arguments)` rather than dropped. Tool runs keep their names, inputs, and outputs; LLM runs keep their token counts; errors keep their status, so failure signals, usage graphs, and optimization treat imported sessions like live ones. Tasks appear once the imported session goes quiet; see [How it works](/how-it-works).
+Imported traffic from the shell or Python is attributed to the API key you pass, like live traffic; filter by it on the Data pages (dashboard imports carry their source label instead). Full message history, tool calls (an assistant turn that only calls tools is kept as `[tool_call] name(arguments)`), token counts, and errors are preserved, so failure signals, usage graphs, and optimization treat imported sessions like live ones. Tasks appear once the imported session goes quiet; see [How it works](/how-it-works).
 
 <Note>
 Dashboard imports skip spans the project already holds, so importing a conversation twice, or resuming an interrupted import, doesn't double it. The shell and Python importers post through the ingest API, which has no such check, so import a conversation once from there.
 </Note>
 
-Dashboard imports have two bounds: an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). A conversation that fails is listed with its reason at the top of **Import Data** and the import moves on, so check the per-conversation failures and counts there when the totals look short. If the source stops accepting the credentials partway through, the import stops with that message instead of failing every remaining conversation; fix the key and start a new import for the rest. Long imports run in chunks and resume within a minute between them.
+Dashboard imports have two bounds: an organization can have two imports running at once, and one import stops after 200,000 spans (what landed is kept; start another for the rest). A conversation that fails is listed with its reason at the top of **Import Data** and the import moves on, so check the per-conversation failures and counts there when the totals look short. If the source stops accepting the credentials partway through, the import stops with that message instead of failing every remaining conversation; fix the key and start a new import for the rest.

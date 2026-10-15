@@ -4,38 +4,24 @@ description: "Try a prompt on any model Belvedir can serve, and compare models s
 sidebarTitle: "Playground"
 ---
 
-The Playground is the dashboard's try-it surface. Open **Playground** in the sidebar, pick a model, and send a message. Add up to four models and every message you send goes to all of them at once, so you can compare answers, speed, and cost on the same prompt.
+Open **Playground** in the sidebar, pick a model, and send a message. Add up to four models and every message goes to all of them at once, so you can compare answers, speed, and cost on the same prompt.
 
 ## Comparing models
 
-Each column is one model. Click **Add model** for another column (up to four) and use the picker at the top of a column to change its model at any time. Columns are titled with a readable model name; replies render as formatted text, so lists, bold text and code blocks look as the model wrote them. The composer at the bottom sends your message to every column.
+Each column is one model. Click **Add model** for another column (up to four) and use the picker at the top of a column to change its model at any time. Every column keeps its own conversation: a follow-up replays that model's own earlier answers, and a column added or swapped mid-conversation only sees the turns it answered itself. **Stop** cuts every reply short.
 
-Every column keeps its own conversation: a follow-up message replays that model's own earlier answers, not another model's. A column you add or swap mid-conversation only sees the turns it answered itself.
-
-Under each reply, a stats line shows:
-
-- total time and time to first token
-- input and output tokens
-- the cost of that reply, as it is billed to your organization
-
-Press **Stop** to cut every reply short. A partial reply stays in that column's conversation, so a follow-up can build on it.
+Under each reply, a stats line shows total time and time to first token, input and output tokens, and the cost of that reply as billed to your organization.
 
 ## System prompt and parameters
 
-Open **Parameters** above the columns to set a system message, a temperature (0 to 2), and a maximum reply length. They apply to every column. Models that reject sampling controls ignore the temperature; a very low token cap turns a thinking model's reasoning off so the answer fits.
+**Parameters** above the columns sets a system message, a temperature (0 to 2), and a maximum reply length for every column. Models that reject sampling controls ignore the temperature; a very low token cap turns a thinking model's reasoning off so the answer fits.
 
 ## Which models are listed
 
-The picker lists the hosted models [Belvedir can serve](/inference/models), grouped by provider, plus any models you registered on the **Cloud Inference** page as **Your endpoints**. You can also type any other model identifier the router accepts.
+The picker lists the hosted models [Belvedir can serve](/inference/models), grouped by provider, plus the endpoints you registered on the **Cloud Inference** page. You can also type any other model identifier the router accepts. With **Chinese models** off under **Project Permissions**, Chinese-lab models are neither listed nor served.
 
-If your project has Chinese-lab models turned off under **Project Permissions**, they are neither listed nor served here.
-
-Fine-tuned models don't run in the Playground until you deploy them on your own provider and register the endpoint on the Cloud Inference page. Local models never run here. A registration can name the id the endpoint expects when it differs from the model's name, so a fine-tuned model shows up here under its own name whatever the deploy called it.
+Fine-tuned models run here once you deploy them and register the endpoint on the **Cloud Inference** page; local models never run here.
 
 ## Billing
 
-A Playground call is a normal inference call on Belvedir's account: it is billed to your organization per token at the rates on the Pricing page (**Inference → Pricing**), and it appears on your project's usage page as **Playground**. It is not counted as router traffic, so it never changes the savings your Routers report.
-
-Calls to your own registered endpoints run on your provider account and cost nothing on Belvedir; the column footer says so instead of showing a rate.
-
-The model you pick is the model that answers. The Playground doesn't route, pin, or cascade the call, so what you see is exactly what that model does with the prompt.
+A Playground call is billed to your organization per token at the rates on the Pricing page (**Inference → Pricing**) and appears on the usage page as **Playground**. Calls to your own registered endpoints run on your provider account and cost nothing on Belvedir. The Playground never routes or pins: the model you pick is the model that answers.

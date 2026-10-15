@@ -1,36 +1,20 @@
 ---
 title: "Benchmarks"
 description: "Run agent harnesses in isolated CPU or GPU sandboxes and collect scores."
-sidebarTitle: "Overview"
+sidebarTitle: "Benchmarks"
 ---
 
-Benchmarks run a **harness** (a git repo you register) inside an isolated sandbox. Belvedir clones the repo, runs your install and run commands, collects a score, and traces every LLM call the harness makes into your project.
-
-A benchmark decomposes into four swappable parts:
-
-```
-MODEL       ×  HARNESS     ×  TASKS       ×  GRADER
-the thing      the agent      what it        how it's
-under test     scaffold       attempts       scored
-```
-
-## Suites, custom benchmarks, and the two runners
-
-Harnesses come in two kinds. **Suites** (SWE-bench Verified, Terminal-Bench 2.1, τ³-bench, GAIA, Aider Polyglot) bring their own tasks and grading. They are Harbor-format suites and run through [Harbor](https://harborframework.com), one container per task: pick the agent scaffold with `HARBOR_AGENT` (`terminus-2` by default, or any Harbor agent such as `claude-code`) and cap the run with `HARBOR_N_TASKS` (5 by default; Terminal-Bench tasks take several minutes each). **Custom benchmarks** are harnesses that accept a task list: you supply the tasks in the harness's Tasks field and an LLM judge grades the outcomes, so you can benchmark exactly the work your agent does in production. The agent scaffolds from the catalog (OpenClaw, OpenCode, Pi) are custom benchmarks that also run through Harbor.
-
-Two first-party runners drive custom benchmarks and [generated environments](/benchmarks/environments). The **Belvedir Runner** runs the whole task set in one Belvedir sandbox. **Belvedir Runner on Harbor** runs each task in its own container. Both share the same minimal agent loop and a pinned, independent LLM judge. Harbor runs execute in Belvedir's managed workspace or on your own Modal account; see [Running on Harbor](/benchmarks/environments#running-on-harbor).
+Benchmarks run a **harness** (a git repo you register) inside an isolated sandbox. Belvedir clones the repo, runs your install and run commands, collects a score from `results.json`, and traces every LLM call the harness makes into your project.
 
 ## Start from the catalog
 
-The New Harness page offers one-click presets: the two Belvedir Runners, the Harbor-format suites, and the agent scaffolds. Some cards are listed but marked **Not yet available** because their drivers are not published yet: the GPU-served lm-eval and MT-Bench presets, and the Hermes Agent, Prime Agent, QM, and Mastra scaffolds. Those can't be added from the page or with `belvedir benchmarks add`, and can't back an environment. Every prefilled field is editable before you create the harness. The Belvedir Runner and the scaffolds bring the agent but no task suite: you author the tasks in the harness's Tasks field, and the sandbox exposes them to your run command as a file at `$BELVEDIR_TASKS_FILE`.
+The **New Harness** page offers one-click presets, every prefilled field editable before you create the harness:
 
-## Pricing
+- **Suites** (SWE-bench Verified, Terminal-Bench 2.1, τ³-bench, GAIA, Aider Polyglot) bring their own tasks and grading. They are Harbor-format suites and run one container per task: pick the agent scaffold with `HARBOR_AGENT` (`terminus-2` by default, or any Harbor agent such as `claude-code`) and cap the run with `HARBOR_N_TASKS` (5 by default; Terminal-Bench tasks take several minutes each). Where they run is on [Run with Harbor](/benchmarks/harbor).
+- **The two Belvedir Runners** accept a task list you author in the harness's Tasks field and grade the outcomes with an independent LLM judge, so you benchmark the work your agent does in production. **Belvedir Runner** runs the whole set in one sandbox; **Belvedir Runner on Harbor** runs each task in its own container. Both also drive [generated environments](/benchmarks/environments).
+- **Agent scaffolds** (OpenClaw, OpenCode, Pi) take the same task list and run through Harbor.
 
-Benchmark runs are not billed; only inference is. Your organization's balance, **Auto reload**, and card live under **Organization Settings → Billing**.
-
-## Choose a compute type
-
-**CPU** (default) is for harnesses whose agent calls a hosted model API: Anthropic, OpenAI, or your own inference endpoint (set its URL as a harness env var). **GPU** is for harnesses that serve a model inside the sandbox: install vLLM or Ollama in your install command and start it from your run command; the sandbox gets an NVIDIA GPU (A10G by default). All sandboxes have git, Python 3, and Node preinstalled.
+Cards marked **Not yet available** (the GPU-served lm-eval and MT-Bench presets, and the Hermes Agent, Prime Agent, QM, and Mastra scaffolds) cannot be added from the page or with `belvedir benchmarks add`, and cannot back an environment.
 
 ## The harness contract
 
@@ -48,13 +32,23 @@ BELVEDIR_GRADING       # "pass@1" (average success over attempts),
                        # or "mean" (average score)
 ```
 
-Drivers written against the legacy `FRACTAL_*` names keep working; see [Migrating from Fractal](/migrating-from-fractal). If the task-set file can't be downloaded at startup, the run fails with a `belvedir:` note rather than running taskless.
+Drivers written against the legacy `FRACTAL_*` names keep working; see [Migrating from Fractal](/migrating-from-fractal). If the task-set file cannot be downloaded at startup, the run fails with a `belvedir:` note rather than running taskless.
 
-Harness env variables are yours to define, with one restriction: a fixed set of build and loader variables (the ones that change how the sandbox itself installs or runs, such as `PATH`, `HOME`, and proxy settings) is refused when you save the harness, and the error names the key. Put that kind of configuration in your install command instead, where it runs after the clone inside your own harness.
+Harness env variables are yours to define, with one restriction: build and loader variables that change how the sandbox itself installs or runs (`PATH`, `HOME`, proxy settings) are refused when you save the harness, and the error names the key. Put that configuration in your install command instead.
+
+### Report a score
+
+Before exiting, write `results.json` at the repo root with a top-level numeric `score` on a **0 to 1 scale**; everything else in the file is stored verbatim.
+
+```json
+{ "score": 0.85, "passed": 17, "failed": 3 }
+```
+
+A score in (1, 100] is read as a percentage and divided by 100, with a `belvedir:` note in the run's log tail; a negative score, one past 100, or exiting 0 without a numeric score fails the run. Belvedir records the model the run was launched with as `results.model`; a `model` field your harness writes is informational, and if it disagrees with the launch configuration it is kept as `results.model_reported` with a note in the log tail. Runs attributed to a fine-tuned model's name appear in that model's **View benchmarks** panel on the **Models** page.
 
 ## Which model runs
 
-Public benchmark drivers don't hardcode a model. The model under test is ordinary harness env, set when you run:
+Public benchmark drivers do not hardcode a model. The model under test is ordinary harness env, set when you run:
 
 ```bash
 MODEL           # model id to evaluate
@@ -62,15 +56,21 @@ MODEL_API_BASE  # OpenAI-compatible base URL (default: OpenRouter)
 MODEL_API_KEY   # key for that endpoint, billed to your account
 ```
 
-The default base is OpenRouter (`https://openrouter.ai/api/v1`): one key of your own covers essentially every hosted model, addressed as `vendor/model` ids like `anthropic/claude-sonnet-5`. Any other OpenAI-compatible endpoint works too (a fine-tune deployed to your own Together account, your own vLLM), and leaving the base blank infers the provider from the model id. On hosted Belvedir you can leave the model key blank and Belvedir covers the model usage for supported open models (spend-capped per run); those runs respect the project's **Chinese models** permission, so naming a Chinese-lab model on a project with it off refuses the launch. LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies. A GPU harness can serve the model instead of calling one: leave `MODEL_API_BASE` blank and serve `MODEL` (a HF id) in-sandbox with vLLM (the fine-tuned-model path), or set it and evaluate the endpoint like any other suite. That means a GPU harness of your own; the catalog's lm-eval and MT-Bench presets follow this contract but are not yet available.
+The default base is OpenRouter (`https://openrouter.ai/api/v1`): one key of your own covers most hosted models, addressed as `vendor/model` ids like `anthropic/claude-sonnet-5`. Any other OpenAI-compatible endpoint works (a fine-tune deployed to your own Together account, your own vLLM), and on a CPU harness leaving the base blank infers the provider from the model id. On hosted Belvedir you can leave the model key blank and Belvedir covers the model usage for supported open models, spend-capped per run; those runs follow the project's **Chinese models** permission, so naming a Chinese-lab model on a project with it off refuses the launch. LLM-judged drivers take the judge separately as `JUDGE_MODEL` / `JUDGE_API_BASE` / `JUDGE_API_KEY`, so the grader stays fixed while the model under test varies.
+
+A GPU harness can serve the model instead of calling one: leave `MODEL_API_BASE` blank and serve `MODEL` (a HuggingFace id) in-sandbox with vLLM. That takes a GPU harness of your own; the catalog's GPU presets are [not yet available](#start-from-the-catalog).
 
 ## Run with attempts and grading
 
-The **New Benchmark** wizard (My Benchmarks → New benchmark) picks one of your benchmarks, how many times each task runs, and the grading rule: `pass@1`, `pass@k`, or mean score. The choice is stamped on the run and handed to the sandbox as `BELVEDIR_TASK_ATTEMPTS` / `BELVEDIR_GRADING`; grading itself is the harness's job: run each task that many times and fold the attempts into the top-level `score` accordingly.
+The **New Benchmark** wizard (My Benchmarks → New benchmark) picks one of your benchmarks, how many times each task runs, and the grading rule: `pass@1`, `pass@k`, or mean score. The choice is stamped on the run and handed to the sandbox as `BELVEDIR_TASK_ATTEMPTS` / `BELVEDIR_GRADING`. Grading is the harness's job: run each task that many times and fold the attempts into the top-level `score`.
+
+## Choose a compute type
+
+**CPU** (default) is for harnesses whose agent calls a hosted model API: Anthropic, OpenAI, or your own inference endpoint (set its URL as a harness env var). **GPU** is for harnesses that serve a model inside the sandbox: install vLLM or Ollama in your install command and start it from your run command; the sandbox gets an NVIDIA GPU (A10G by default). All sandboxes have git, Python 3, and Node preinstalled.
 
 ## Send traces explicitly
 
-The SDK does **not** read these variables on its own; pass them to `initialize()`:
+The SDK does **not** read the contract variables on its own; pass them to `initialize()`:
 
 ```ts
 import { initialize, withSession, flush } from "belvedir";
@@ -87,20 +87,14 @@ await withSession({ sessionId: process.env.BELVEDIR_RUN_ID }, async () => {
 await flush(); // required: the sandbox exits right after your command
 ```
 
-## Report a score
-
-Before exiting, write `results.json` at the repo root. A top-level numeric `score` on a **0 to 1 scale** is shown in the dashboard (scores are compared across models in the routing editor, so a percent scale would read as 100× better); everything else is stored verbatim. A score in (1, 100] is read as a percentage and divided by 100, with a `belvedir:` note appended to the run's log tail; a negative score or one past 100 fails the run, as does exiting 0 without a numeric score. Belvedir records which model the run was launched with as `results.model` itself, so attribution never depends on the harness: a `model` field your harness writes is informational, and if it disagrees with the launch configuration it is preserved as `results.model_reported` with a note in the log tail. Runs attributed to a fine-tuned model's name appear in that model's _View benchmarks_ panel on the Models page.
-
-```json
-{ "score": 0.85, "passed": 17, "failed": 3 }
-```
-
 ## Benchmark a fine-tuned model
 
-GPU harnesses that serve the model in-sandbox can also be launched from the Models page against one of your fine-tuned models (a GPU harness of your own for now; the catalog's lm-eval and MT-Bench presets are not yet available). The sandbox is then given extra environment variables: `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name; Belvedir records it as `results.model` on the run, so attribution doesn't depend on the harness echoing it), and `HF_TOKEN` for gated bases, so the harness serves base \+ adapter and the run shows up in that model's _View benchmarks_ panel.
+A GPU harness that serves the model in-sandbox can be launched from the **Models** page against one of your fine-tuned models. The sandbox is then given extra environment variables: `MODEL` (base HuggingFace id), `ADAPTER_URL` (a short-lived signed URL to the LoRA zip), `MODEL_LABEL` (the model's name, recorded as `results.model`), and `HF_TOKEN` for gated bases. Serve base plus adapter and the run shows up in that model's **View benchmarks** panel.
 
 ## Limits
 
-Runs are capped at 1 hour of sandbox time. Results are capped at 256 KB, the stored log tail at 16 KB, and a harness's Tasks field at 512 KB. An organization can have 4 benchmark runs in flight and 24 in any 24-hour window; past either cap the launch is refused with a clear message. The harness's git repo is checked at launch (a repo that definitively 404s or needs access you don't have refuses the launch instead of failing mid-run). A non-zero exit code from your run command marks the run failed. Tasks and task groups form from the run's sessions like any other traffic; see [How it works](/how-it-works).
+Runs are capped at 1 hour of sandbox time. Results are capped at 256 KB, the stored log tail at 16 KB, and a harness's Tasks field at 512 KB. An organization can have 4 benchmark runs in flight and 24 in any 24-hour window; past either cap the launch is refused with a clear message. The harness's git repo is checked at launch: a repo that 404s or needs access you do not have refuses the launch instead of failing mid-run. A non-zero exit code from your run command marks the run failed. Tasks and task groups form from the run's sessions like any other traffic. Runs in Belvedir's managed Harbor workspace have extra conditions, checked before launch; see [Run with Harbor](/benchmarks/harbor).
 
-Runs in Belvedir's managed Harbor workspace have extra conditions, checked before launch; see [Running on Harbor](/benchmarks/environments#running-on-harbor).
+## Pricing
+
+Benchmark runs are not billed, and that includes the model usage Belvedir covers when you leave the model key blank. Model calls made with your own provider key bill to that provider account. Managed Harbor runs still require the organization to hold credits or have pay as you go on, set under **Organization Settings → Billing**.

@@ -1,55 +1,21 @@
 ---
 title: "Cloud Inference"
-description: "Trace agents calling hosted OpenAI-compatible endpoints like Together, Fireworks, Groq, and OpenRouter."
+description: "Register your own OpenAI-compatible endpoints so the router serves fine-tuned, self-hosted, or third-party models on your account."
 sidebarTitle: "Cloud Inference"
 ---
 
-Open models too big for your hardware run the same way from a hosted OpenAI-compatible endpoint; the integration is identical to [local models](/inference/local-models), just with a different base URL and a real API key.
+The **Cloud Inference** page registers model ids that Belvedir executes on an endpoint of yours instead of its own account: a fine-tuned model you deployed, a self-hosted vLLM server, or a model on a provider account you hold. Calls to a registered id run on your endpoint with your key, metered for the usage graphs but never billed by Belvedir.
 
-## 1. Pick an endpoint
+## Register an endpoint
 
-Providers like [Together](https://www.together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com) and [OpenRouter](https://openrouter.ai) serve open models behind OpenAI-compatible APIs. If you'd rather run your own weights, self-host [vLLM](https://docs.vllm.ai) on a GPU cloud; it exposes the same API.
-
-## 2. Point your agent at the hosted endpoint
-
-Same OpenAI SDK, different base URL:
-
-```ts
-import OpenAI from "openai";
-
-const client = new OpenAI({
-  baseURL: "https://api.together.xyz/v1",
-  apiKey: process.env.TOGETHER_API_KEY,
-});
-
-const res = await client.chat.completions.create({
-  model: "Qwen/Qwen3-235B-A22B",
-  messages: [{ role: "user", content: "hello" }],
-});
-```
-
-## 3. Trace it as usual
-
-Initialize the SDK with `instrumentModules: { openAI: openai.OpenAI }` and wrap agent runs in `withSession`. Spans arrive with the hosted model name, so local, hosted and cloud-provider calls stay distinguishable in the dashboard.
-
-## 4. Register the endpoint for the router (optional)
-
-If your project uses [model routing](/inference/mixture-of-models), register the deployment's base URL and provider key under **Cloud Inference** in the dashboard. Calls the router sends to that model then execute on your endpoint with your key: this is how the router serves your fine-tuned and self-hosted models, and those calls are metered for the usage graphs but never billed.
+Enter the model id, the endpoint's base URL, and its API key. The base URL must be `https`, publicly resolvable, and not a Belvedir host; a `3xx` answer is not followed (`502`, `gateway_redirect`), so register the final host.
 
 If the endpoint knows the model under a different id (a Together deploy's generated name, or a provider model you want to serve under a name of your own), fill in **Model id it runs as**: requests go out with that id, while routers, the Playground and the usage graphs keep the name you registered. Leave it blank when the ids match.
 
-Leave the base URL blank instead, and the same field names a hosted model Belvedir serves: your name then runs on Belvedir's account as that model, billed at its rate like any hosted call, with no key of yours stored.
+Leave the base URL blank instead, and **Model id it runs as** names a hosted model Belvedir serves: your name then runs on Belvedir's account as that model, billed at its rate like any hosted call, with no key of yours stored.
 
-> Note: unlike local models, the hosted provider sees your prompts; the usual data-handling considerations for a cloud provider apply.
+## Where registered models appear
 
-## Testing a fine-tuned model without a provider
+A registered id is accepted by the [chat-completions endpoint](/api-reference/chat-completions), can be placed in any router tier or task-group assignment on the **Routers** page, and is listed in the [Playground](/inference/playground). Without a registration, local and fine-tuned model ids return `400` on the inference endpoints; the [decision endpoint](/api-reference/route) still routes to them for calls your own code runs.
 
-Models fine-tuned on Belvedir need no provider account while you test: every test session on the Models page is itself an OpenAI-compatible server. Start a session ("Run inference" on the model's row), open **Use as an API endpoint** next to the chat, and copy the snippet: a base URL, a session key, and the model name `adapter`. Point any OpenAI SDK or curl at it from your own code. The endpoint lives for the session's 30 minutes and the key stops working when the session ends.
-
-Two things to keep in the request (the snippet includes both): the model name must be `adapter` (the base model name would skip your LoRA), and `chat_template_kwargs: {"enable_thinking": false}` (thinking bases like Qwen3 otherwise spend the token budget on reasoning).
-
-## Deploying a fine-tuned model
-
-Models trained on Belvedir are standard PEFT LoRA adapters. Click **Deploy** on the model's row (Models page) and paste a Together API key: the platform merges the adapter into the base weights and uploads the merged model to a managed, scale-to-zero endpoint in your Together account (Together doesn't accept raw LoRA adapters on dedicated endpoints, so the deploy ships a full merged copy; expect roughly 10 to 40 minutes depending on the base size). The key is used for the deploy and never stored. Then point your agent at that endpoint exactly as above.
-
-Two preconditions, each refused with a clear message: the model needs a recoverable training checkpoint to merge from (models trained on the managed fleet have one), and the base model must be on Together's supported dedicated-endpoint list. A model that can't deploy this way still serves in the playground session above and self-hosts on vLLM. Prefer somewhere else? The panel also has prefilled steps for Fireworks and self-hosted vLLM, and the adapter downloads as a plain PEFT zip that loads anywhere. Belvedir is never in the request path.
+Models fine-tuned on Belvedir can be tested and deployed from the **Models** page before you register anything; see [LoRA finetuning](/training/overview#test-a-fine-tuned-model).

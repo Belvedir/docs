@@ -34,7 +34,7 @@ Upgrade to the latest `belvedir` and these go away:
 
 - **`initialize() failed` mentioning `parseKeyPairsIntoRecord`** (Node 0.3.1): a dependency conflict. Fixed in 0.3.2.
 - **`withSession("id", fn)` had no effect** (Node before 0.3.1): the string form was ignored, so spans arrived without a session and no tasks formed. Pass `{ sessionId }` on old versions.
-- **A streamed final assistant reply is missing** (Node before 0.4.0, Python before 0.6.0): raw HTTP calls with `stream: true` were not recorded. Newer releases record streamed completions.
+- **A streamed final assistant reply is missing** (Node before 0.4.0, Python before 0.6.0): raw HTTP calls with `stream: true` were not recorded. Streamed raw-HTTP capture needs `belvedir` 0.4.0 or later on npm, 0.6.0 or later on PyPI.
 - **Startup crash with an unhandled rejection mentioning `api.traceloop.com`** (Node 0.4.1 and earlier): set `TRACELOOP_SYNC_ENABLED=false` before initializing. Later releases disable it for you.
 
 ## Importers

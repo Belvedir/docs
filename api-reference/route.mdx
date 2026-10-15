@@ -1,13 +1,14 @@
 ---
-title: "POST /api/v1/route: Ask Which Model Should Serve a Call"
+title: "Routing decision"
 sidebarTitle: "POST /route"
-description: "Ask Belvedir which model should serve a call, decided from your project's routers and task groups. Fast and replayable; no LLM in the decision path."
+description: "Ask Belvedir which model should serve a call, decided from your project's routers and task groups, without executing anything."
 ---
 
-Asks which model should serve a call and executes nothing. Use it when your own code runs the model: local models, your own provider accounts, or a client you cannot repoint. The decision comes from the project's routers: size-tier defaults (Big for hard requests, Medium for the bulk, Small for quick machine tasks) plus per-task-group assignments. Belvedir matches the request to your task groups and scores the complexity of the instruction itself; pasted documents and payload text never escalate a request on size alone, though pasted code still counts as hard. The decision is fast and replayable: no LLM sits in the decision path, and the same input decides the same way. How tiers, task groups, **Smart routing** and **Automatic updates** work is on [Model Routing](/inference/mixture-of-models).
+`POST /api/v1/route` asks which model should serve a call and executes nothing. Use it when your own code runs the model: local models, your own provider accounts, or a client you cannot repoint. How routers, tiers, **Smart routing** and **Automatic updates** decide is on [Model routing](/inference/mixture-of-models).
 
-- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
-- **Body**: `{ "messages": [...] }` or `{ "task": "summarize this doc" }`, plus an optional `"session_id"` (a body field on this endpoint, up to 200 characters) and an optional `"model"`: naming a model decides through that model's anchored router, exactly as naming it on [chat completions](/api-reference/chat-completions) does. Bodies cap at 128 KB.
+## Request
+
+- **Body**: `{ "messages": [...] }` or `{ "task": "summarize this doc" }`, plus an optional `"session_id"` (up to 200 characters) and an optional `"model"`: naming a model decides through that model's anchored router, exactly as naming it on [chat completions](/api-reference/chat-completions) does. Bodies cap at 128 KB.
 
 ```ts
 const res = await fetch("https://platform.belvedir.ai/api/v1/route", {
@@ -27,7 +28,7 @@ const model = route.configured ? route.model : "qwen3:4b"; // local fallback
 ```json
 {
   "configured": true,
-  "model": "qwen3:4b",
+  "model": "zai-org/GLM-5.2-FP8",
   "tier": "default",
   "matched_group": null,
   "complexity": 0.35,
@@ -37,31 +38,28 @@ const model = route.configured ? route.model : "qwen3:4b"; // local fallback
 }
 ```
 
-`tier` says why that model was chosen:
+| Field | Meaning |
+| --- | --- |
+| `configured` | `false` when the project has no router; the call still returns `200`, so keep a local fallback model |
+| `model` | the model to serve the call with |
+| `tier` | why it was chosen (below) |
+| `matched_group` | `{ id, label }` when a task group matched, else `null` |
+| `complexity` | the request's difficulty score |
+| `router_id` | the router that decided |
+| `anchor_model` | set when the router is anchored on a model your code named |
 
-- `"group"`: a task group you assigned a model to matched.
-- `"group-record"`: **Automatic updates** picked the model from the task group's recorded results.
-- `"strong"`: the request scored as hard, so the Big model serves it.
-- `"small"`: the request is a quick machine task (a short, single-shot instruction with a clear task shape and no code) and a Small model is set.
-- `"pinned"`: an earlier decision for the same `session_id` was replayed (below).
-- `"fixed"`: the project turned **Smart routing** off, so the named model (or the Default model, for `auto`) is served with no substitution.
-- `"default"`: the Medium model.
+`tier` values:
 
-`matched_group` is `{ id, label }` when a task group matched. `router_id` names the router that decided, and `anchor_model` is set when it is a router anchored on a model your code named. The cheaper tiers only ever serve machine-shaped tasks: calls that classify, extract, summarize, or demand a strict output format, template-style prompts, and tool loops. When a person is talking to the model (a dialogue, or a message with no task markers) the response comes from the top of the router; ambiguous requests count as conversation, so they route up, not down.
-
-Every new project starts with a Default router, so a fresh project routes from day one; its contents are listed on [Model Routing](/inference/mixture-of-models). A project with no router (the auto router cannot be deleted, only replaced by making another router auto) gets `configured: false`, never an error, so the call is safe to ship before any dashboard config exists; keep a local fallback model.
+| Tier | Meaning |
+| --- | --- |
+| `group` | a task group you assigned a model to matched |
+| `group-record` | **Automatic updates** picked the model from the task group's recorded results |
+| `strong` | the request scored as hard, so the Big model serves it |
+| `small` | the request is a quick machine task and a Small model is set |
+| `pinned` | an earlier decision for the same `session_id` was replayed (below) |
+| `fixed` | **Smart routing** is off, so the named model (or the Medium model, for `auto`) is served with no substitution |
+| `default` | the Medium model |
 
 ## Session pinning
 
-Pass your SDK session id as `session_id` and the session's first decision sticks: repeat calls return the same model as `tier: "pinned"` for up to 24 hours, keeping a conversation consistent and prompt caches warm. Changing a router releases stale pins (a pinned model no longer in the config is re-decided). Fresh decisions are logged, which is what powers the **Routers** page's observed per-task-group success rates and recommendations.
-
-## Related endpoints
-
-The endpoints below make the same decision and then run the call for you:
-
-- [`POST /api/v1/route/chat/completions`](/api-reference/chat-completions): OpenAI-compatible chat completions, routed or anchored on the model your code names.
-- [`POST /api/v1/messages`](/api-reference/messages): the Anthropic Messages API, passed through untranslated.
-- [`POST /api/v1/route/embeddings`](/api-reference/embeddings): OpenAI-compatible embeddings.
-- [`/api/v1/route/batches`](/api-reference/batches): deferred bulk inference at the batch rate.
-
-To point an existing client at Belvedir, start with [Route your calls](/inference/route-your-calls).
+Pass your SDK session id as `session_id` and the session's first decision sticks: repeat calls return the same model as `tier: "pinned"` for up to 24 hours, keeping a conversation consistent and prompt caches warm. Changing a router releases stale pins (a pinned model no longer in the config is re-decided).

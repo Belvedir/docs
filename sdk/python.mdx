@@ -1,7 +1,7 @@
 ---
-title: "Python SDK"
+title: "Python quickstart"
 description: "Trace Python agents with the belvedir package."
-sidebarTitle: "Python"
+sidebarTitle: "Python quickstart"
 ---
 
 Python agents use `belvedir`: the same concepts as the Node SDK, with context managers instead of callbacks. It auto-instruments the installed `anthropic` / `openai` / LangChain / LlamaIndex packages ([full list](/sdk/supported-providers)). Coming from `belvedir-loop`? See [Migrating from Fractal](/migrating-from-fractal).
@@ -14,7 +14,7 @@ pip install belvedir
 
 ## 2. Initialize at process startup
 
-Call `initialize()` once, before your agent makes LLM calls. There is no `instrumentModules` equivalent: auto-instrumentation sees the installed packages directly, so the only ordering rule is `initialize()` first (details on [Installation](/sdk/installation)). A second `initialize()` call logs a warning and is ignored:
+Call `initialize()` once, before your agent makes LLM calls. There is no `instrumentModules` equivalent: auto-instrumentation sees the installed packages directly, so the only ordering rule is `initialize()` first. A second `initialize()` call logs a warning and is ignored:
 
 ```python
 import os
@@ -26,11 +26,11 @@ loop.initialize(
 )
 ```
 
-Raw `requests` / `httpx` calls to OpenAI-compatible endpoints (`POST .../chat/completions`) are captured automatically too, streamed responses included, so agent frameworks with their own HTTP layer are traced without a client SDK. Don't rewrite raw HTTP calls to a client SDK just for tracing; pass `instrument_http=False` to `initialize()` to opt out.
+Raw `requests` / `httpx` calls to OpenAI-compatible endpoints (`POST .../chat/completions`) are captured too, streamed responses included; pass `instrument_http=False` to `initialize()` to opt out.
 
 ## 3. Wrap agent work in sessions
 
-Same as the Node SDK: `session` links every span under one session id (required for tasks and task groups), and `task()` optionally marks task boundaries. Both are context managers, they work inside `async def` bodies, and `session` also accepts a `metadata` dict. `with_session` is an alias of `session`:
+`session` links every span under one session id (required for tasks and task groups), and `task()` optionally marks task boundaries. Both are context managers, they work inside `async def` bodies, and `session` also accepts a `metadata` dict. `with_session` is an alias of `session`:
 
 ```python
 with loop.session(session_id=chat_id, user_id=user.id):

@@ -1,20 +1,20 @@
 ---
-title: "Tracing Background Workers: Queues, Threads, and Session Continuity"
+title: "Background workers"
 sidebarTitle: "Background workers"
 description: "Keep sessions intact when agent work crosses process and thread boundaries: per-process initialization, passing session ids through queues, and flush rules."
 ---
 
-Agent pipelines rarely stay in one process. Work gets enqueued to a Celery or BullMQ worker, runs inside a Temporal activity, fans out to a thread pool, or forks. Each of those boundaries can silently drop spans or strip their session, because the SDK's session context is carried in the process's own execution context. Three rules keep worker spans arriving and linked.
+Work that crosses a process, thread, or queue boundary (a Celery or BullMQ worker, a Temporal activity, a thread pool, a fork) can silently drop spans or arrive without a session. Three rules keep worker spans arriving and linked.
 
 ## 1. Initialize in every process
 
-`initialize()` is per process. A queue worker, forked child, or subprocess never inherits the parent's initialization: its LLM calls produce nothing, and (the part that hides the problem) `flush()` in that process silently no-ops instead of erroring. Call `initialize()` at each worker process's startup.
+`initialize()` is per process. A queue worker, forked child, or subprocess never inherits the parent's initialization: its LLM calls produce nothing, and `flush()` in that process silently no-ops instead of erroring. Call `initialize()` at each worker process's startup.
 
-For prefork servers (gunicorn with `--preload`, `multiprocessing` with the fork start method), initialize **after** the fork, in the worker's own startup hook: the span exporter runs on a background thread, and a thread started before `fork()` does not survive into the child.
+For prefork servers (gunicorn with `--preload`, `multiprocessing` with the fork start method), initialize **after** the fork, in the worker's own startup hook.
 
 ## 2. Pass the session id as data, and re-open the session
 
-`session()` attaches its context via the OpenTelemetry context (contextvars-backed in Python, async-context-backed in Node). That context follows `await` within the same task, but it never crosses a thread, a process, or a queue hop: an LLM call made inside a Celery task, Temporal activity, or `ThreadPoolExecutor` job arrives session-less even when the job was enqueued from inside `session()`.
+The session context follows `await` within the same task, but it never crosses a thread, a process, or a queue hop: an LLM call made inside a Celery task, Temporal activity, or `ThreadPoolExecutor` job arrives session-less even when the job was enqueued from inside `session()`.
 
 The fix is one line on each side. A session id is just a string: carry it in the job payload (or the activity's arguments), and re-open the session inside the worker:
 
@@ -29,7 +29,7 @@ def handle_job(payload, session_id):
     loop.flush()
 ```
 
-Spans reported under the same id merge into one session, so the producer's turns and the worker's turns read as one conversation. For threads you spawn yourself, `contextvars.copy_context().run(...)` also carries the context over in Python, but re-opening the session is simpler and works everywhere.
+Spans reported under the same id merge into one session, so the producer's turns and the worker's turns read as one conversation.
 
 If a workload genuinely has no id to carry (a third-party agent you can't modify), the ingest header `x-belvedir-session-from: trace` promotes each trace's id to a session id, but that makes one session per trace and fragments multi-step work, so pass the real id whenever you control the code.
 
@@ -40,8 +40,3 @@ Call `flush()` at the end of each job (long-lived workers) and before exit (shor
 ## Reporting outcomes from workers
 
 The job is where you learn whether the work succeeded, so call `report_outcome(session_id, ...)` there, after `flush()`; see [Outcomes](/api-reference/outcomes).
-
-## Next steps
-
-- [Custom agent loops](/guides/custom-agent-loops): instrumenting the loop the worker runs.
-- [Common issues](/troubleshooting/common-issues): the symptoms, if worker spans are still missing.

@@ -1,14 +1,14 @@
 ---
-title: "Local Models"
-description: "Trace agents running open models locally via Ollama."
-sidebarTitle: "Local Models"
+title: "Local and hosted open models"
+description: "Trace agents that call open models on your own machine or on a hosted OpenAI-compatible endpoint."
+sidebarTitle: "Local and hosted models"
 ---
 
-Belvedir traces agents running on local models the same way it traces cloud providers: same sessions, tasks, and task groups. The only difference is where the tokens are generated.
+Agents on local or hosted open models are traced like any other: same sessions, tasks, and task groups.
 
 ## 1. Run a model locally
 
-Download the **Belvedir Local** desktop app; it bundles the [llama.cpp](https://github.com/ggml-org/llama.cpp) engine (with [Ollama](https://ollama.com) and [vLLM](https://docs.vllm.ai) as switchable alternatives) and walks you through picking a model that fits your machine's memory; the weights download on first launch.
+Download the **Belvedir Local** desktop app from the dashboard's **Local Inference** page; it bundles the [llama.cpp](https://github.com/ggml-org/llama.cpp) engine (with [Ollama](https://ollama.com) and [vLLM](https://docs.vllm.ai) as switchable alternatives) and walks you through picking a model that fits your machine's memory; the weights download on first launch.
 
 <Note>
 macOS blocks the app on first open (it isn't notarized yet). Click Done, not Move to Trash, then run `xattr -cr "/Applications/Belvedir Local.app"` and reopen it. Approving it under System Settings → Privacy & Security → Open Anyway also works.
@@ -36,6 +36,21 @@ const res = await client.chat.completions.create({
 
 ## 3. Trace it as usual
 
-Nothing changes on the Belvedir side: initialize the SDK and wrap agent runs in `withSession` exactly as for a hosted endpoint; see [Cloud Inference](/inference/hosted#3-trace-it-as-usual). Spans arrive with the local model name (for example `qwen3:4b`), so local and cloud calls stay distinguishable in the dashboard.
+Initialize the SDK and wrap agent runs in `withSession` as usual; see [Installation](/sdk/installation). Spans arrive with the model name (for example `qwen3:4b`), so local, hosted and cloud-provider calls stay distinguishable in the dashboard.
 
-> Note: inference stays on your machine, but traces do not: prompts and completions are exported to Belvedir like any instrumented app. Only enable tracing for local workloads you're comfortable sending.
+<Note>
+Inference stays on your machine, but traces do not: prompts and completions are exported to Belvedir like any instrumented app. Only enable tracing for local workloads you're comfortable sending.
+</Note>
+
+## Hosted OpenAI-compatible endpoints
+
+Open models too big for your hardware run the same way from a hosted OpenAI-compatible endpoint ([Together](https://www.together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), or your own [vLLM](https://docs.vllm.ai) server). Steps 2 and 3 apply unchanged, with the provider's base URL and a real API key:
+
+```ts
+const client = new OpenAI({
+  baseURL: "https://api.together.xyz/v1",
+  apiKey: process.env.TOGETHER_API_KEY,
+});
+```
+
+Unlike a local model, the hosted provider sees your prompts. To have Belvedir's router serve a model on such an endpoint, register it under [Cloud Inference](/inference/hosted).

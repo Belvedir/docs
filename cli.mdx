@@ -1,25 +1,18 @@
 ---
-title: "Belvedir CLI"
+title: "CLI"
 sidebarTitle: "CLI"
 description: "The Belvedir platform from your shell: projects, keys, traces, training, benchmarks, and routing."
 ---
 
-Everything the dashboard shows you, from the terminal. The CLI signs in as your real Belvedir account, so it sees exactly the organizations, projects, and keys the dashboard would.
+Everything the dashboard shows you, from the terminal. The CLI signs in as your Belvedir account, so it sees exactly the organizations, projects, and keys the dashboard would.
 
 ```bash
 npm install -g @belvedir/cli
-belvedir login          # opens your browser (Google sign-in)
+belvedir login          # opens your browser: click Approve
 belvedir projects
 ```
 
-`belvedir login` opens the Belvedir dashboard, where you're usually already signed in: click **Approve** and the terminal is in. Email/password accounts can skip the browser entirely: `belvedir login --email you@example.com`. The session lives in `~/.config/belvedir/credentials.json` (owner-only permissions) and refreshes automatically. `belvedir logout` revokes that session on the server (only that session; your browser and other terminals stay signed in), then deletes the file. Offline, it still signs you out locally and the server session expires on its own.
-
-## Operating systems
-
-The CLI runs anywhere Node 18 or newer does: macOS, Linux, and Windows. The package has no dependencies.
-
-- **Windows**: credentials are stored at `.config\belvedir\credentials.json` under your user profile folder (set `XDG_CONFIG_HOME` to relocate them on any OS).
-- **Headless or remote machines** (SSH, containers): if no browser opens, copy the approve URL the terminal prints into a browser on any device; the terminal polls for up to 10 minutes, then the approval link expires. Re-run `belvedir login` if it timed out.
+Email/password accounts can skip the browser: `belvedir login --email you@example.com`. The session is stored at `~/.config/belvedir/credentials.json` (`.config\belvedir\credentials.json` under your profile folder on Windows; set `XDG_CONFIG_HOME` to relocate it) and refreshes automatically. `belvedir logout` revokes that session on the server and deletes the file. The CLI runs anywhere Node 18 or newer does and has no dependencies. On a headless machine, copy the approve URL the terminal prints into a browser on any device; the link expires after 10 minutes, so re-run `belvedir login` if it timed out.
 
 ## Reading your data
 
@@ -51,13 +44,15 @@ belvedir github                      # connected GitHub accounts
 belvedir help                        # every command and flag
 ```
 
-Projects are referenced by UUID or by name when it's unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`, and list reads take `-n <count>` (default 20, max 200).
+Projects are referenced by UUID or by name when it is unambiguous. Every read takes `--json` for raw output ready to pipe into `jq`, and list reads take `-n <count>` (default 20, max 200).
 
 ## Acting
 
-Write commands re-verify the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it; the flow finishes on the web.
+Write commands check the same authorization as their dashboard equivalents (project visibility, key ownership, org owner/admin roles). Destructive commands require a literal `--yes`. Browser-side flows (buying credits, connecting GitHub) print a URL and open it; the flow finishes on the web.
 
 ### Projects and keys
+
+API keys are minted in the dashboard (the **API Keys** page), where the raw key is shown once; there is no `belvedir keys create`.
 
 ```bash
 belvedir projects create my-agent [--org <org-id>]
@@ -70,9 +65,9 @@ belvedir github connect                   # opens the GitHub App install page
 belvedir outcome my-agent <session-id> fail
 ```
 
-One deliberate gap: `belvedir keys create` doesn't exist. API keys are minted in the dashboard (**Platform → API Keys**), where the raw key is shown once.
-
 ### Training
+
+The flags are explained on [Optimization loops](/training/optimization-loops) (`--design`, `--autonomy`, signals) and [LoRA finetuning](/training/overview) (methods, bases, auto-training).
 
 ```bash
 belvedir setup my-agent --target "Fewer failed orders" --loops harness,lora --codebase https://github.com/you/agent --autonomy harness=review --design loop2 --keys all
@@ -90,37 +85,32 @@ belvedir models download <model-id>       # signed adapter URL
 belvedir deploy <model-id> [--key <together-key>]   # deploy a fine-tune to your own Together account
 ```
 
-See [Optimization loops](/training/optimization-loops) for `--design` and `--autonomy`, and [LoRA finetuning](/training/overview) for the methods and bases.
+### Benchmarks and environments
 
-### Environments and benchmarks
+The harness contract, presets, and attempts/grading are on [Benchmarks](/benchmarks/overview); environment presets and synthesis on [Environments](/benchmarks/environments); Modal tokens and the managed workspace on [Run with Harbor](/benchmarks/harbor).
 
 ```bash
 belvedir benchmarks catalog               # the public presets and their env
 belvedir benchmarks create my-agent --name smoke --git-url https://github.com/you/harness --run "python run.py" [--install "pip install -e ."] [--compute cpu|gpu] [--tasks-file ./tasks.jsonl]
-belvedir benchmarks add my-agent swe-bench-verified --env MODEL=anthropic/claude-sonnet-5
-belvedir benchmarks add my-agent swe-bench-verified --env MODEL=anthropic/claude-sonnet-5,MODAL_TOKEN_ID=...,MODAL_TOKEN_SECRET=...   # your own Modal tokens for a Harbor run on your account
+belvedir benchmarks add my-agent swe-bench-verified --env MODEL=anthropic/claude-sonnet-5[,MODAL_TOKEN_ID=...,MODAL_TOKEN_SECRET=...]   # add Modal tokens to run on your own account
 belvedir benchmarks run <harness-id> --attempts 5 --grading pass@k
 belvedir benchmarks run <harness-id> --model <trained-model-id> [--hf-token hf_...]   # GPU eval of a fine-tune (token for gated bases)
 belvedir benchmarks cancel <run-id>
 belvedir benchmarks delete <harness-id> --yes
-belvedir environments generate my-agent --group <group-id>                       # the default driver
-belvedir environments generate my-agent --group <group-id> --preset harbor-runner  # Belvedir Runner on Harbor (one container per task)
-belvedir environments generate my-agent --group <group-id> --preset belvedir       # the in-sandbox runner
-belvedir environments generate my-agent --group <group-id> --synthesize            # + rubric verifiers; polls until they land (--no-wait returns at once)
+belvedir environments generate my-agent --group <group-id> [--preset harbor-runner|belvedir] [--synthesize [--no-wait]] [--repo https://github.com/you/agent --run "python eval.py"]
 belvedir environments status <environment-id> [--wait]   # a synthesis's progress
 belvedir environments export my-agent --id <environment-id> --out ./env [--limit 3]   # Harbor dataset: harbor run -p ./env
-belvedir environments generate my-agent --group <group-id> --repo https://github.com/you/agent --run "python eval.py"
 belvedir environments simulate my-agent --group <group-id>
 belvedir environments declare my-agent --name "Refund requests" --description "Customer asks for a refund..."
 belvedir simulations run <simulation-id> --episodes 8 [--model <model-id>]   # the model that plays the agent: a priced Claude, Grok, or hosted open model
 ```
 
-Which driver `environments generate` picks by default, and when to pass your own Modal tokens, is covered in [Running on Harbor](/benchmarks/environments#running-on-harbor).
-
 ### Routing
 
+Tiers, task-group assignments, and the auto router are explained on [Model routing](/inference/mixture-of-models).
+
 ```bash
-belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --small Qwen/Qwen3.5-9B --threshold 0.5
+belvedir routing set my-agent --default qwen3:4b --strong zai-org/GLM-5.2-FP8 --small Qwen/Qwen3.5-9B   # --default = Medium, --strong = Big
 belvedir routing pin my-agent <group-id> qwen3:4b
 belvedir routing unpin my-agent <group-id>
 belvedir routing routers my-agent         # all routers: auto + drafts
@@ -128,7 +118,9 @@ belvedir routing promote <router-id>      # switch which router serves traffic
 belvedir routing stats my-agent           # per-task-group model records + recommendation
 ```
 
-### Billing and members
+### Organization and billing
+
+Roles and billing live under **Organization Settings** in the dashboard.
 
 ```bash
 belvedir orgs create "my team"
@@ -138,27 +130,24 @@ belvedir members invite my-org teammate@example.com [--role member|admin]   # ow
 belvedir members remove my-org <user-id>  # owner or admin (not the owner); your own id = leave
 belvedir members role my-org <user-id> admin|member   # owner or admin; the owner's role can't change
 belvedir access set my-agent <user-id> off
-belvedir billing buy my-org --amount 20   # opens Stripe Checkout
+belvedir billing buy my-org --amount 20   # opens the checkout page
 belvedir billing redeem my-org <code>
 belvedir billing payg my-org              # save the org's card (auto reload / pay as you go)
 belvedir billing payg --on|--off|--remove # manage pay as you go on the saved card
 ```
 
-### Login and config
+### Login
 
 ```bash
 belvedir login                            # browser approval
 belvedir login --email you@example.com    # email/password accounts
 belvedir login --readonly                 # a read-only session for agent machines (below)
-belvedir login --platform https://your-host   # a different platform host
+belvedir login --platform https://your-host   # a different platform host (https only; localhost is refused)
 belvedir logout
 ```
 
 ## Using with coding agents
 
-If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly or pastes the token into a browser: the dashboard refuses every write from a read-only session too. `belvedir logout` is the one write a read-only session can make. Prefer a member account with project exclusions over the org owner's account for agent machines. Never approve a sign-in link you didn't initiate: the approve page shows a verification code that must match the one your terminal printed.
+If an AI coding agent will run `belvedir`, sign in with `belvedir login --readonly`: the session is marked server-side and every write command (approving proposals, launching runs, changing members or routing) is rejected at the platform, even if something bypasses the CLI and calls the API directly or pastes the token into a browser. `belvedir logout` is the one write a read-only session can make. Prefer a member account with project exclusions over the org owner's account for agent machines. Never approve a sign-in link you did not initiate: the approve page shows a verification code that must match the one your terminal printed.
 
-## Notes
-
-- Sending traces is not the CLI's job; that's the [`belvedir`](/sdk/installation) SDK.
-- A different platform host: `belvedir login --platform https://your-host`. The URL must be `https://`; login refuses plain `http://` and any `localhost` / `127.0.0.1` host, since the session it mints is a real account session.
+Sending traces is not the CLI's job; that is the [`belvedir`](/sdk/installation) SDK.

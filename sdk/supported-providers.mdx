@@ -1,7 +1,7 @@
 ---
-title: "LLM Providers Supported by Belvedir Auto-Instrumentation"
+title: "Providers"
 sidebarTitle: "Providers"
-description: "Belvedir auto-instruments the major LLM providers with zero extra code. OpenAI, Anthropic, Cohere, Bedrock, Vertex AI, and more are supported; the exact list differs by SDK."
+description: "The LLM providers and frameworks Belvedir auto-instruments, and which call styles are captured. The exact list differs by SDK."
 ---
 
 Belvedir auto-instruments these libraries once `initialize()` has run. The lists differ by language, so check the one for your SDK:
@@ -33,8 +33,22 @@ Replicate and HuggingFace are not instrumented on Node; call them through an Ope
 
 ## OpenAI-compatible endpoints
 
-Local models via [Ollama](/inference/local-models) and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), self-hosted [vLLM](https://docs.vllm.ai)) work through the OpenAI SDK, and also through raw `fetch` / `requests` / `httpx` calls to any OpenAI-compatible `chat/completions` endpoint, streamed responses included, with no client SDK at all. Belvedir's own hosted models are called the same way; see [Cloud Inference](/inference/hosted).
+Local models and hosted OpenAI-compatible endpoints ([Together](https://together.ai), [Fireworks](https://fireworks.ai), [Groq](https://groq.com), [OpenRouter](https://openrouter.ai), self-hosted [vLLM](https://docs.vllm.ai)) work through the OpenAI SDK, and raw HTTP calls to any `chat/completions` endpoint are captured too (see [What is captured](#what-is-captured)). Setup is on [Local and hosted models](/inference/local-models); Belvedir's own hosted models are called the same way.
 
 Apps built on the [AI SDK](https://ai-sdk.dev) (the `ai` package) are captured only when calls go through `@ai-sdk/openai-compatible`; see the [AI SDK guide](/guides/ai-sdk).
 
 For agents you didn't write (OpenClaw, Hermes, or anything that already speaks OpenTelemetry), see [Agents without the SDK](/guides/otel-agents).
+
+## What is captured
+
+| Call style | Captured? |
+| --- | --- |
+| `openai` client SDK (any base URL: OpenAI, OpenRouter, vLLM, a proxy) | Yes |
+| `anthropic` client SDK | Yes |
+| Frameworks Belvedir auto-instruments (LangChain, LlamaIndex, ...; the lists above) | Yes |
+| Raw HTTP `POST .../chat/completions` (Node `fetch`, Python `requests`/`httpx`) | Yes, streamed responses included\* |
+| Raw HTTP to Anthropic's `/v1/messages` wire shape | **No**: use the `anthropic` client SDK for those call sites |
+| Raw HTTP to `/embeddings`, `/responses`, or other non-chat paths | **No**: the raw-HTTP layer watches only `chat/completions` |
+| Python `aiohttp` | **No**: use `httpx` or a client SDK |
+
+\* Requires the current `belvedir` release (`npm install belvedir@latest` / `pip install -U belvedir`).

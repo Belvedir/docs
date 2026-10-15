@@ -1,13 +1,12 @@
 ---
-title: "POST /api/v1/outcomes: Report Ground-Truth Session Outcomes"
+title: "Outcomes"
 sidebarTitle: "POST /outcomes"
 description: "Tell Belvedir whether a session actually worked, from a signal only your app has. Reported outcomes beat model-judged labels."
 ---
 
 Reports whether a session actually worked, from a signal only your app has: the order shipped, the test passed. Same API-key auth as ingest. The SDK wraps this as `reportOutcome(sessionId, outcome)` (Python: `report_outcome`).
 
-- **Authorization**: Bearer token with your API key, or use the `x-api-key` header.
-- **Body**: `{ "session_id": "...", "outcome": "success" | "fail" }` (16 KB max). `session_id` is truncated to 200 characters, so a longer id will not match the session it was meant for.
+- **Body**: `{ "session_id": "...", "outcome": "success" | "fail" }` (over 16 KB returns `413`). `session_id` is truncated to 200 characters, so a longer id will not match the session it was meant for.
 - **Scope**: a project key may report on any of the project's sessions; the per-run key a benchmark run mints may only report on sessions from its own run.
 
 Reported ground truth beats Belvedir's own judgment of the session, asymmetrically: a `fail` overrides the session's tasks to fail, so bad sessions drop out of training data and environments everywhere task outcomes are read, while a `success` is stored on the session only (it never promotes tasks Belvedir judged failed).
@@ -15,3 +14,7 @@ Reported ground truth beats Belvedir's own judgment of the session, asymmetrical
 <Warning>
 A report for a session the platform hasn't seen yet returns 404; call `flush()` first so the session's spans have arrived.
 </Warning>
+
+## Limits
+
+Rate limit: 2 requests per second sustained per API key, burst 120; `429` with a `Retry-After` header beyond it.

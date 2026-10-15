@@ -1,0 +1,39 @@
+---
+title: "Run with Harbor"
+description: "Export an environment as a Harbor dataset and run it locally, from Belvedir in the managed workspace, or on your own Modal account."
+sidebarTitle: "Run with Harbor"
+---
+
+Generated environments and the catalog's suites are [Harbor](https://harborframework.com) datasets, one container per task. This page covers running them outside Belvedir on your own machine, and the two places a Harbor run from Belvedir can execute.
+
+## On your own machine
+
+Export the environment and run it against any Harbor agent, or feed it to a Harbor-compatible trainer:
+
+```bash
+belvedir environments export <project> --id <environment id> --out ./env
+git clone https://github.com/Belvedir/harness-harbor      # ships the Belvedir agent as belvedir_harbor/
+uv tool install "harbor[modal]"                            # Harbor itself, in its own venv
+export PYTHONPATH=$PWD/harness-harbor                      # so Harbor can import belvedir_harbor
+export JUDGE_API_KEY=$OPENROUTER_API_KEY MODEL_API_KEY=$OPENROUTER_API_KEY
+harbor run -p ./env -a oracle -y                                                   # validate the verifier: expect 1.0
+harbor run -p ./env -a belvedir_harbor.agent:BelvedirAgent -m openai/gpt-4.1-mini -y   # score a model
+harbor run -p ./env -a claude-code -m anthropic/claude-sonnet-5 -y                  # or any Harbor agent
+```
+
+Add `--limit 3` to the export for a smoke run. Rewards land in Harbor's jobs directory; Harbor prints the mean.
+
+Each task becomes a directory: the prompt in `instruction.md` (with a line telling the agent to write its final answer to `/app/answer.md`), a `task.toml`, a small Dockerfile, a verifier in `tests/`, and `solution/solve.sh`, which writes the recorded answer so `-a oracle` checks the verifier before you spend on a model. Judge and rubric tasks are graded with the same independent judge the Belvedir Runner uses. Two deterministic verifier kinds are available for tasks you author: `code` runs the task's own `verify(answer, state)` function, and `state_diff` compares the files under `/app/state` to the task's golden files (a task's `setup.state` files are placed there before the agent runs). Both run under Harbor only, and `state_diff` tasks need an agent that edits files in the container (OpenCode, Pi, Claude Code, and similar); the default Belvedir agent only writes an answer.
+
+The judge's key is never in the export: `task.toml` reads `JUDGE_API_KEY` from your environment, so `harbor run` asks to confirm host access (`-y` skips the prompt). Harbor imports a custom agent (`-a module:Class`) inside its own interpreter, so point `PYTHONPATH` at the `harness-harbor` clone as above; the oracle and Harbor's built-in agents need only Harbor itself. The `belvedir-harbor` package is not on PyPI, so there is no `pip install` for it.
+
+## From Belvedir
+
+Pick **Belvedir Runner on Harbor** as the harness when generating an environment (preselected on hosted Belvedir; `--preset harbor-runner` from the CLI). Each task runs in its own container, the run appears on My Benchmarks like any other, and the model calls are traced into your project. To score a production agent that is a service rather than a model, set `BELVEDIR_AGENT_URL` (and optionally `BELVEDIR_AGENT_TOKEN`) on the harness: the runner posts each task as JSON and grades whatever your service returns.
+
+## Managed workspace or your own Modal account
+
+The task containers run in one of two places. The same applies to the Harbor-format suites on the [Benchmarks](/benchmarks/overview) page:
+
+- **Belvedir's managed workspace** is the default on hosted Belvedir: leave `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` blank on the harness. Managed runs use the catalog's Harbor driver as shipped, so the harness must keep the driver's install and run commands unchanged, and its env may only carry the variables the driver reads: `MODEL`, `MODEL_API_BASE`, `MODEL_API_KEY`, `MODEL_LABEL`, `JUDGE_MODEL`, `JUDGE_API_BASE`, `JUDGE_API_KEY`, `HARBOR_DATASET`, `HARBOR_AGENT`, `HARBOR_N_TASKS`, `HARBOR_CONCURRENCY`, `HARBOR_TASK_NAMES`, `HARBOR_MODEL`, `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`, `BELVEDIR_AGENT_URL`, `BELVEDIR_AGENT_TOKEN`, `OPENROUTER_API_KEY`. `HARBOR_AGENT` must be a plain Harbor agent name (`terminus-2`, `claude-code`, `belvedir`; not a `module:Class` import path), `HARBOR_CONCURRENCY` is 1 to 4, `HARBOR_N_TASKS` is blank or 1 to 50, the harness uses CPU compute, and your organization must have credits or pay as you go on. A launch that fails one of these conditions is refused with a message naming the variable or condition.
+- **Your own Modal account**: set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` on the harness (`--env` from the CLI) and the same harness runs there, with none of the managed-workspace limits and any edits to the driver you like.

@@ -1,10 +1,10 @@
 ---
-title: "Instrumenting Custom Agent Loops: Coverage, Sessions, and Tasks"
+title: "Custom agent loops"
 sidebarTitle: "Custom agent loops"
-description: "Learn how to instrument a hand-rolled agent loop with Belvedir: inventory every LLM call site, know exactly what auto-instrumentation captures, and place sessions and tasks."
+description: "Instrument a hand-rolled agent loop: inventory every LLM call site, check what is captured, and place sessions and tasks."
 ---
 
-You don't need a framework for Belvedir to trace an agent. A custom in-house loop (a `while` loop over model turns and tool dispatch) instruments the same way as any app: `initialize()` once, wrap each run in a `session`, optionally mark units of work with `task()`. What actually goes wrong in real integrations isn't the loop; it's coverage. Codebases of any age accumulate LLM call sites outside the main loop, and a missed one produces no error, just silently missing data.
+A custom in-house loop (a `while` loop over model turns and tool dispatch) instruments the same way as any app: `initialize()` once, wrap each run in a `session`, optionally mark units of work with `task()`. The usual gap is coverage: a missed call site produces no error, just missing data.
 
 ## Inventory every LLM call site first
 
@@ -22,21 +22,9 @@ grep -rn "OpenAI(\|Anthropic(\|chat/completions\|/v1/messages" src/
 grep -rn "api.openai.com\|api.anthropic.com\|openrouter.ai\|embeddings" src/
 ```
 
-## What auto-instrumentation captures, and what it doesn't
+## Check what is captured
 
-| Call style | Captured? |
-| --- | --- |
-| `openai` client SDK (any base URL: OpenAI, OpenRouter, vLLM, a proxy) | Yes |
-| `anthropic` client SDK | Yes |
-| Frameworks Belvedir auto-instruments (LangChain, LlamaIndex, ...; see [Providers](/sdk/supported-providers)) | Yes |
-| Raw HTTP `POST .../chat/completions` (Node `fetch`, Python `requests`/`httpx`) | Yes, streamed responses included\* |
-| Raw HTTP to Anthropic's `/v1/messages` wire shape | **No**: use the `anthropic` client SDK for those call sites |
-| Raw HTTP to `/embeddings`, `/responses`, or other non-chat paths | **No**: the raw-HTTP layer watches only `chat/completions` |
-| Python `aiohttp` | **No**: use `httpx` or a client SDK |
-
-\* Requires `belvedir>=0.4.0` on npm or `belvedir>=0.6.0` on PyPI.
-
-Two details worth knowing. The raw-HTTP layer skips requests made by the official OpenAI/Anthropic clients so nothing is captured twice, which also means a client-SDK call site has exactly one capture path: if `initialize()` didn't run before that client's library was imported, there is no HTTP-level fallback ([init-order rule](/sdk/installation)). And in Python there is no `instrumentModules`: auto-instrumentation always sees the installed packages, so init order is only about running `initialize()` before LLM calls are made.
+Not every call style is captured; the table on [Providers](/sdk/supported-providers#what-is-captured) says which are. A client-SDK call site has exactly one capture path, so if `initialize()` didn't run before that library was imported there is no HTTP-level fallback ([init-order rule](/sdk/installation)).
 
 ## Place the session, then the tasks
 
@@ -66,10 +54,4 @@ Two session rules that bite custom loops specifically:
 
 ## When a call site can't be captured
 
-For a call style outside the table above (an unsupported HTTP client, a language without an SDK, a hop through infrastructure you don't control), emit spans yourself: the ingest endpoint at `POST /api/v1/traces` accepts standard OTLP (JSON or protobuf), and any span carrying a `session.id` or `gen_ai.conversation.id` attribute joins its session like SDK traffic. The [OTel-native agents guide](/guides/otel-agents) documents that contract end to end.
-
-## Next steps
-
-- [Background workers](/guides/background-workers): when the loop's work crosses a process, thread, or queue boundary.
-- [Model routing](/inference/mixture-of-models): running the loop's inference through Belvedir.
-- [Common issues](/troubleshooting/common-issues): the symptoms, if something above didn't take.
+For a call style that isn't captured (an unsupported HTTP client, a language without an SDK, a hop through infrastructure you don't control), emit spans yourself with any OpenTelemetry exporter; see [Agents without the SDK](/guides/otel-agents).

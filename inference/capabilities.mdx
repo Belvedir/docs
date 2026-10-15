@@ -1,10 +1,10 @@
 ---
-title: "Capabilities and Limits"
-description: "What Belvedir inference can and cannot do: the four serving surfaces, what each supports, the models they execute, and every hard limit."
-sidebarTitle: "Capabilities & Limits"
+title: "Capabilities and limits"
+description: "What Belvedir inference can and cannot do: the four serving surfaces, what each supports, and every hard limit."
+sidebarTitle: "Capabilities and limits"
 ---
 
-Belvedir serves inference on four surfaces, all behind the same `bv_live_` API key. This page is the summary of what each one can and cannot do, and the one place every hard limit is listed. The request and response contracts live in the API reference, linked per surface below.
+Belvedir serves inference on four surfaces behind the same `bv_live_` API key. The request and response contracts are in the API reference, linked per surface.
 
 ## The four surfaces
 
@@ -32,37 +32,20 @@ A fifth endpoint, [`POST /api/v1/route`](/api-reference/route), makes the routin
 | **Token compression** | Yes, per-project toggle, on by default | No: the body is never touched | No |
 | Per-call cost | `usage.cost` on the body and the `x-belvedir-cost` header | `x-belvedir-cost` header on non-streamed calls only; streamed calls carry no cost header | Per-result `cost` in the results list |
 
-What **Smart routing** and **Automatic updates** change is on [Model Routing](/inference/mixture-of-models).
+What **Smart routing** and **Automatic updates** change is on [Model routing](/inference/mixture-of-models).
 
-## Models each surface executes
+## Models
 
-The full catalog with identifiers is on [Available Models](/inference/models). In summary:
-
-- **Chat completions**: every Claude model, every callable OpenAI chat model, Grok, and the hosted open models. Model ids you registered under **Cloud Inference** execute on your own endpoint (metered, never billed).
-- **Messages passthrough**: Claude models, plus the six hosted open models listed on [Messages](/api-reference/messages#models). Nothing else; other ids get a `400` pointing at the OpenAI-compatible endpoint.
-- **Embeddings**: any OpenAI `text-embedding-*` id is accepted, but an unpriced one returns `400`; the priced ones are `text-embedding-3-small`, `text-embedding-3-large`, and `text-embedding-ada-002`.
-- **Batches**: Anthropic models (up to 100,000 requests per batch), OpenAI models (up to 50,000), and the three hosted open models with a batch tier: GLM 5.2, Kimi K2.6, and Gemma 4 31B (up to 1,000). One batch can mix providers.
+The catalog with identifiers, batch tiers, and the rules for local, fine-tuned, and your own registered models is on [Available models](/inference/models); the Messages passthrough accepts Claude models plus the open models listed on [Messages](/api-reference/messages#models).
 
 ## What Belvedir cannot do
 
-Each of these fails fast with a clear error rather than an opaque upstream failure:
-
-- **Local models** (Ollama-style `name:tag` ids) and **your project's fine-tuned models** are never executed by the router: `400`. Use the decision endpoint and run the call yourself, or register a deployment under **Cloud Inference**, which lifts the restriction.
-- **OpenAI's Responses API**: the router speaks chat completions only, so OpenAI's pro and codex families return `400` naming the base chat model to use instead.
 - **Anthropic Managed Agents / Agent API sessions** run their inference inside Anthropic's own orchestration; there is no base URL to override, for Belvedir or anyone else. Instrument those workloads with the Belvedir SDK for observability instead.
-- **No routing on the Messages passthrough or in batches**: both surfaces are model-pinned; `"auto"` returns `400`. Routing lives on the chat-completions endpoint.
-- **Forced tool choice on Claude Fable 5.1 and Claude Opus 5.5**: both reject `tool_choice: "required"` and named-function choices (Anthropic returns `400`). On chat completions and in batches Belvedir sends those calls with `tool_choice: "auto"` instead; only chat completions says so on the wire (`x-belvedir-retry: tool-choice-auto`), while a batch result carries no marker, so check batch results for a text answer where you expected a tool call. Name the tool in your prompt and do not assume a `tool_calls` finish. The Messages passthrough is untranslated: send `{"type": "auto"}` yourself there. Neither model runs with thinking off, so an off setting has no effect on them.
-- **Anthropic server tools: web search and web fetch only, on the Messages passthrough only.** Other server tools return `400`; native batch `params` refuse every server tool. Details on [Messages](/api-reference/messages#server-tools).
-- **No redirects from your endpoint**: a registered endpoint that answers `3xx` returns `502` (`gateway_redirect`) instead of being followed; register the final host. Base URLs must be `https`, public, and not Belvedir's own hosts.
-- **Unpriced Anthropic, OpenAI and hosted open model ids** return `400`. Grok and open-model pass-through ids bill at the provider's reported cost per call, so they need no rate entry.
-- **No batch tier** for open-model pass-through ids or for DeepSeek V4 Flash, gpt-oss 120B and the NVFP4 Gemma variant.
-- **No streaming inside batches**, and Anthropic-native `params` bodies are not accepted for OpenAI models.
+- **Forced tool choice on Claude Fable 5.1 and Claude Opus 5.5**: both reject `tool_choice: "required"` and named-function choices. On chat completions and in batches Belvedir sends those calls with `tool_choice: "auto"` instead; chat completions says so in `x-belvedir-retry: tool-choice-auto`, a batch result carries no marker, so check batch results for a text answer where you expected a tool call. Name the tool in your prompt and do not assume a `tool_calls` finish. The Messages passthrough is untranslated: send `{"type": "auto"}` yourself there. Neither model runs with thinking off.
 - **No token-counting, files, image generation, audio, or realtime APIs**: the surfaces above are text-in, text-out chat, embeddings, and batches.
 - **Chinese-lab models when the project turned them off** (**Project Permissions**): `403` on every surface, never a silent substitution. See [Data handling](/data-handling).
 
-## Reliability backstops
-
-Belvedir retries doomed calls (an empty answer after a reasoning trace ate the budget, a spurious content-filter refusal on a model the router chose, a rejected thinking-off switch) rather than bill you for nothing, and says so in the `x-belvedir-retry` header. What each retry does and what it meters is on [chat completions](/api-reference/chat-completions#server-side-retries).
+Per-surface refusals (local and fine-tuned ids without a registered endpoint, OpenAI's pro and codex families, `"auto"` on the Messages passthrough or in batches, server tools, redirects from your endpoint, unpriced ids) are listed in each endpoint's Errors section.
 
 ## Operational limits
 
@@ -71,12 +54,12 @@ Belvedir retries doomed calls (an empty answer after a reasoning trace ate the b
 | Request body: chat completions | 1 MB |
 | Request body: Messages passthrough | 20 MB |
 | Request body: embeddings | 4 MB |
-| Request body: batch submission | 4 MB per request inline (`413` beyond it); larger submissions go through the [upload flow](/api-reference/batches#large-submissions) |
+| Request body: batch submission | About 4.5 MB per request inline (`413` beyond it); larger submissions go through the [upload flow](/api-reference/batches#large-submissions) |
 | Request body: routing decision (`POST /api/v1/route`) | 128 KB |
-| Request body: trace ingest (`POST /api/v1/traces`) | 4 MB on the wire; gzip accepted, inflating to at most 5 MB; up to 1,000 spans and 200 sessions per request |
+| Request body: trace ingest (`POST /api/v1/traces`) | 5 MB, raw or gzip-inflated; up to 1,000 spans and 200 sessions per request |
 | Rate: chat, messages, embeddings | 25 requests per second sustained per API key, burst 300 (default; adjustable per organization on request, including unlimited) |
 | Rate: batch submissions | 30 per minute per API key, burst 30 (status polls: 60 per minute, burst 120; results reads are not rate-limited) |
-| Rate: trace ingest | 2 requests per second sustained per key, burst 120 |
+| Rate: trace ingest | 2 requests per second sustained per key, burst 120; separately, 20 new session ids per second, burst 2,000 |
 | Live call duration | 5 minutes end to end; stream long generations |
 | Batch size | 100,000 requests per batch (Anthropic); 50,000 (OpenAI); 1,000 requests and about 2 MB serialized for the hosted open models with a batch tier |
 | Batch `custom_id` | 1 to 64 characters, unique per batch |
