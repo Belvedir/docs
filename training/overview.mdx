@@ -24,7 +24,14 @@ Pick one per run, from the dashboard, the CLI (`belvedir train <project> --metho
 
 ## Base models
 
-Qwen 2.5 7B Instruct, Llama 3.1 8B Instruct, and Qwen 3.5 9B. Llama is gated on HuggingFace, so a run on it asks for an HF token; the token is used only for that run and never stored.
+The base model picker in the setup wizard lists what your training compute can train.
+
+- **Managed fleet**: Qwen 3.5 9B (the default), plus Qwen 3.5 4B, Qwen 3 8B, Qwen 3.5 9B Base, Qwen 3.8 27B, Qwen 3.6 35B, Qwen 3.5 35B Base, Qwen 3.5 397B, DeepSeek V4.1 Flash, Kimi K2.6, GLM 5.3 Flash, Nemotron 3.5 Lightning 30B, Nemotron 3 Super 120B, Nemotron 3.5 Super VL 120B, Nemotron 3 Ultra 550B, GPT-OSS 20B, and GPT-OSS 120B.
+- **Private GPUs**: Qwen 2.5 7B Instruct and Llama 3.1 8B Instruct. Llama is gated on HuggingFace, so a run on it asks for an HF token; the token is used only for that run and never stored.
+
+Fine-tunes of Qwen 3.5 9B, Qwen 2.5 7B Instruct, and Llama 3.1 8B Instruct run in the playground and in benchmarks. The other bases are train-and-download: the adapter is yours to download and host, and it does not run in the playground or in benchmarks.
+
+Projects with **Chinese models** turned off are not offered bases from Chinese labs.
 
 ## Auto-training
 
@@ -40,7 +47,7 @@ Load a ready adapter on its base with `peft`, vLLM's `--lora-modules`, or any ru
 
 ## Test a fine-tuned model
 
-Every finished model has a **Run inference** button on the **Models** page. It serves the base model with your adapter attached and opens a chat panel against it. A test session costs about $2 and runs for up to 60 minutes; warm-up takes from a few minutes to about 25 for bases whose adapters must be merged first.
+Every finished model on a base that runs in the playground (see [Base models](#base-models)) has a **Run inference** button on the **Models** page. It serves the base model with your adapter attached and opens a chat panel against it. A test session costs about $2 and runs for up to 60 minutes; warm-up takes from a few minutes to about 25 for bases whose adapters must be merged first.
 
 The session is also an OpenAI-compatible server, so no provider account is needed to test from code. Open **Use as an API endpoint** next to the chat and copy the snippet: a base URL, a session key, and the model name `adapter`. Point any OpenAI SDK or curl at it. The endpoint lives for the session's 60 minutes and the key stops working when the session ends.
 
